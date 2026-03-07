@@ -81,6 +81,10 @@
                 <label>メディア一覧（pal_db）</label>
                 <button class="button secondary" type="button" id="refresh-media">更新</button>
               </div>
+              <div class="flex">
+                <input id="media-upload" type="file" accept="image/*" multiple />
+                <button class="button secondary" type="button" id="upload-media">アップロード</button>
+              </div>
               <div class="list" id="media-list"></div>
               <p class="notice">クリックすると画像URLに追加されます。</p>
             </div>
@@ -157,6 +161,8 @@
       const mediaList = document.getElementById("media-list");
       const refreshMediaButton = document.getElementById("refresh-media");
       const previewLink = document.getElementById("preview-link");
+      const mediaUploadInput = document.getElementById("media-upload");
+      const uploadMediaButton = document.getElementById("upload-media");
       const hearingAnswers = document.getElementById("hearing-answers");
       const hearingModal = document.getElementById("hearing-modal");
       const hearingChat = document.getElementById("hearing-chat");
@@ -392,6 +398,40 @@
         }
       };
 
+      const uploadMediaFiles = async () => {
+        if (!activeCustomer?.paletteId) {
+          alert("顧客を選択してください。");
+          return;
+        }
+        const files = mediaUploadInput.files;
+        if (!files || files.length === 0) return;
+        uploadMediaButton.disabled = true;
+        uploadMediaButton.textContent = "アップロード中...";
+        try {
+          for (const file of files) {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("paletteId", activeCustomer.paletteId);
+            const response = await fetch(`${PAL_DB_ORIGIN}/api/media/upload`, {
+              method: "POST",
+              body: formData,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+              throw new Error(data?.error || "アップロードに失敗しました。");
+            }
+          }
+          mediaUploadInput.value = "";
+          await loadMediaAssets(activeCustomer.paletteId);
+        } catch (error) {
+          console.error(error);
+          alert(`アップロードに失敗しました。\n${error?.message || ""}`);
+        } finally {
+          uploadMediaButton.disabled = false;
+          uploadMediaButton.textContent = "アップロード";
+        }
+      };
+
       const loadCustomersFromPalDb = async () => {
         try {
           const activeOn = new Date().toISOString().slice(0, 10);
@@ -535,6 +575,7 @@
           await loadMediaAssets(activeCustomer.paletteId);
         }
       });
+      uploadMediaButton.addEventListener("click", uploadMediaFiles);
       openHearingChat.addEventListener("click", () => {
         hearingModal.classList.add("active");
       });
