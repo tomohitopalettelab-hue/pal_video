@@ -16,10 +16,7 @@
             <p class="subtext">liteプラン専用の簡易編集・プレビュー生成</p>
           </div>
         </div>
-        <div class="flex">
-          <a class="button secondary" href="../index.html">トップへ</a>
-          <button class="button" id="reset-form">新規案件</button>
-        </div>
+        <div class="flex"></div>
       </header>
 
       <section class="grid">
@@ -28,7 +25,8 @@
           <form class="form" id="job-form">
             <div>
               <label for="customer-name">顧客名</label>
-              <input id="customer-name" name="customer-name" placeholder="例: Palette Cafe" required />
+              <input id="customer-name" name="customer-name" placeholder="pal_dbの顧客名が入ります" readonly />
+              <p class="notice" id="customer-meta">paletteId: - / plan: -</p>
             </div>
             <div>
               <label for="purpose">用途</label>
@@ -133,6 +131,7 @@
       const approveButton = document.getElementById("approve");
       const jobList = document.getElementById("job-list");
       const resolutionLabel = document.getElementById("resolution");
+      const customerMeta = document.getElementById("customer-meta");
       const hearingAnswers = document.getElementById("hearing-answers");
       const hearingModal = document.getElementById("hearing-modal");
       const hearingChat = document.getElementById("hearing-chat");
@@ -175,6 +174,7 @@
         activeCustomer = null;
         activeJob = null;
         fields.customerName.value = "";
+        customerMeta.textContent = "paletteId: - / plan: -";
         fields.purpose.value = "instagram_reel";
         fields.duration.value = "30";
         fields.telopMain.value = "";
@@ -190,7 +190,7 @@
         const meta = deriveResolution(fields.purpose.value);
         const hearingPayload = activeJob?.payload || {};
         return {
-          customerName: fields.customerName.value.trim(),
+          customerName: fields.customerName.value.trim() || activeCustomer?.name || "",
           purpose: fields.purpose.value,
           durationSec: Number(fields.duration.value),
           resolution: meta.resolution,
@@ -212,6 +212,7 @@
       const populateForm = (customer, payload) => {
         activeCustomer = customer;
         fields.customerName.value = payload?.customerName || customer?.name || "";
+        customerMeta.textContent = `paletteId: ${customer?.paletteId || "-"} / plan: ${customer?.planCode || "-"}`;
         fields.purpose.value = payload?.purpose || "instagram_reel";
         fields.duration.value = String(payload?.durationSec || 30);
         fields.telopMain.value = payload?.telopMain || "";
@@ -403,7 +404,9 @@
         alert("顧客OK: YouTube自動アップはAPI接続後に有効になります。");
       });
 
-      resetButton.addEventListener("click", resetForm);
+      if (resetButton) {
+        resetButton.addEventListener("click", resetForm);
+      }
       fields.purpose.addEventListener("change", refreshResolution);
       openHearingChat.addEventListener("click", () => {
         hearingModal.classList.add("active");
