@@ -13,13 +13,13 @@
 
 ## Scene IDs (1-7)
 For each scene N (01..07):
-- scene_N_bg
+- scene_N
 - scene_N_title
 - scene_N_sub
 - scene_N_duration
 
 Example for scene 1:
-- scene_01_bg
+- scene_01
 - scene_01_title
 - scene_01_sub
 - scene_01_duration
@@ -35,3 +35,4 @@ Example for scene 1:
 - Keep IDs lowercase with underscores.
 - For unused scenes, hide elements or set opacity to 0.
 - If a dynamic template is used, keep these IDs as a compatibility layer.
+- For images, use public URLs in `source` (not text prompts).
