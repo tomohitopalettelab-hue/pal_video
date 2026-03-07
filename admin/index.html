@@ -37,6 +37,10 @@
                 <option value="promotion">プロモーション/広告</option>
               </select>
             </div>
+            <div>
+              <label for="template-id">動画テンプレート</label>
+              <select id="template-id" name="template-id"></select>
+            </div>
             <div class="flex">
               <div style="flex: 1;">
                 <label>解像度</label>
@@ -124,6 +128,12 @@
         youtube: { label: "YouTube", resolution: "1920x1080", aspect: "16:9" },
         promotion: { label: "プロモーション/広告", resolution: "1080x1350", aspect: "4:5" }
       };
+      const TEMPLATE_OPTIONS = [
+        { id: "modern_15", label: "Modern: シンプル & クリーン", durationSec: 15, scenes: 4 },
+        { id: "pop_15", label: "Pop: 元気 & 親しみ", durationSec: 15, scenes: 4 },
+        { id: "corporate_30", label: "Corporate: 信頼と実績", durationSec: 30, scenes: 7 },
+        { id: "elegant_30", label: "Elegant: ラグジュアリー", durationSec: 30, scenes: 7 }
+      ];
 
       const form = document.getElementById("job-form");
       const resetButton = document.getElementById("reset-form");
@@ -141,6 +151,7 @@
       const fields = {
         customerName: document.getElementById("customer-name"),
         purpose: document.getElementById("purpose"),
+        templateId: document.getElementById("template-id"),
         duration: document.getElementById("duration"),
         telopMain: document.getElementById("telop-main"),
         telopSub: document.getElementById("telop-sub"),
@@ -170,12 +181,31 @@
         resolutionLabel.textContent = meta.resolution;
       };
 
+      const renderTemplateOptions = () => {
+        fields.templateId.innerHTML = "";
+        TEMPLATE_OPTIONS.forEach((template) => {
+          const option = document.createElement("option");
+          option.value = template.id;
+          option.textContent = `${template.label} (${template.durationSec}s)`;
+          fields.templateId.appendChild(option);
+        });
+      };
+
+      const getTemplateById = (id) => {
+        return TEMPLATE_OPTIONS.find((template) => template.id === id) || TEMPLATE_OPTIONS[0];
+      };
+
+      const getTemplateByDuration = (durationSec) => {
+        return TEMPLATE_OPTIONS.find((template) => template.durationSec === durationSec) || TEMPLATE_OPTIONS[0];
+      };
+
       const resetForm = () => {
         activeCustomer = null;
         activeJob = null;
         fields.customerName.value = "";
         customerMeta.textContent = "paletteId: - / plan: -";
         fields.purpose.value = "instagram_reel";
+        fields.templateId.value = TEMPLATE_OPTIONS[0].id;
         fields.duration.value = "30";
         fields.telopMain.value = "";
         fields.telopSub.value = "";
@@ -183,6 +213,7 @@
         fields.colorAccent.value = "#1c9a8b";
         fields.imageUrls.value = "";
         fields.bgm.value = "light";
+        fields.duration.value = String(TEMPLATE_OPTIONS[0].durationSec);
         refreshResolution();
       };
 
@@ -191,6 +222,7 @@
         const hearingPayload = activeJob?.payload || {};
         return {
           customerName: fields.customerName.value.trim() || activeCustomer?.name || "",
+          templateId: fields.templateId.value,
           purpose: fields.purpose.value,
           durationSec: Number(fields.duration.value),
           resolution: meta.resolution,
@@ -214,7 +246,11 @@
         fields.customerName.value = payload?.customerName || customer?.name || "";
         customerMeta.textContent = `paletteId: ${customer?.paletteId || "-"} / plan: ${customer?.planCode || "-"}`;
         fields.purpose.value = payload?.purpose || "instagram_reel";
-        fields.duration.value = String(payload?.durationSec || 30);
+        const template = payload?.templateId
+          ? getTemplateById(payload.templateId)
+          : getTemplateByDuration(Number(payload?.durationSec || 30));
+        fields.templateId.value = template.id;
+        fields.duration.value = String(payload?.durationSec || template.durationSec);
         fields.telopMain.value = payload?.telopMain || "";
         fields.telopSub.value = payload?.telopSub || "";
         fields.colorPrimary.value = payload?.colorPrimary || "#E95464";
@@ -421,6 +457,10 @@
         resetButton.addEventListener("click", resetForm);
       }
       fields.purpose.addEventListener("change", refreshResolution);
+      fields.templateId.addEventListener("change", (event) => {
+        const template = getTemplateById(event.target.value);
+        fields.duration.value = String(template.durationSec);
+      });
       openHearingChat.addEventListener("click", () => {
         hearingModal.classList.add("active");
       });
@@ -432,6 +472,7 @@
       });
 
       resetForm();
+      renderTemplateOptions();
       refreshResolution();
       loadCustomersFromPalDb();
     </script>
