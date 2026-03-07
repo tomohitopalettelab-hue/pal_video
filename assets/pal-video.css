@@ -153,6 +153,131 @@ header {
   gap: 14px;
 }
 
+.cut-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cut-track {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  background: rgba(255, 255, 255, 0.6);
+  flex: 1;
+  min-height: 92px;
+}
+
+.cut-thumb {
+  min-width: 96px;
+  height: 78px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.85);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cut-thumb.has-image {
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.cut-thumb.active {
+  border-color: var(--accent);
+  box-shadow: 0 10px 20px rgba(233, 84, 100, 0.25);
+  transform: translateY(-2px);
+}
+
+.cut-editor {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.9);
+  display: grid;
+  gap: 12px;
+}
+
+.cut-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cut-preview {
+  display: grid;
+  gap: 12px;
+}
+
+.cut-preview .video-stage {
+  border-radius: 18px;
+}
+
+@keyframes textFade {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes textSlide {
+  0% {
+    transform: translateY(18px);
+  }
+  25% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes textFloat {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes textPop {
+  0% {
+    transform: scale(0.92);
+  }
+  40% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .form label {
   font-weight: 600;
   display: block;
@@ -336,5 +461,9 @@ header {
 
   .hero h2 {
     font-size: 30px;
+  }
+
+  .cut-track {
+    min-height: 86px;
   }
 }

@@ -37,30 +37,15 @@
                 <option value="promotion">プロモーション/広告</option>
               </select>
             </div>
-            <div>
-              <label for="template-id">動画テンプレート</label>
-              <select id="template-id" name="template-id"></select>
-            </div>
             <div class="flex">
               <div style="flex: 1;">
                 <label>解像度</label>
                 <div id="resolution" class="tag">1080x1920</div>
               </div>
               <div style="flex: 1;">
-                <label>尺</label>
-                <select id="duration">
-                  <option value="15">15秒</option>
-                  <option value="30" selected>30秒</option>
-                </select>
+                <label>合計尺</label>
+                <div id="duration-total" class="tag">0秒</div>
               </div>
-            </div>
-            <div>
-              <label for="telop-main">メインテロップ</label>
-              <input id="telop-main" placeholder="例: 春の新作、解禁。" />
-            </div>
-            <div>
-              <label for="telop-sub">サブテロップ</label>
-              <input id="telop-sub" placeholder="例: 3日間限定オファー" />
             </div>
             <div class="flex">
               <div style="flex: 1;">
@@ -73,8 +58,60 @@
               </div>
             </div>
             <div>
-              <label for="image-urls">画像URL（改行区切り）</label>
-              <textarea id="image-urls" placeholder="https://example.com/hero.jpg"></textarea>
+              <label>カット編集</label>
+              <div class="cut-strip">
+                <button class="button secondary" type="button" id="cut-prev">←</button>
+                <div class="cut-track" id="cut-track"></div>
+                <button class="button secondary" type="button" id="cut-next">→</button>
+                <button class="button secondary" type="button" id="add-cut">+ カット追加</button>
+              </div>
+              <div class="cut-editor" id="cut-editor">
+                <div class="flex">
+                  <div style="flex: 1;">
+                    <label for="cut-duration">秒数</label>
+                    <input id="cut-duration" type="number" min="1" step="1" />
+                  </div>
+                  <div style="flex: 1;">
+                    <label for="cut-image">画像URL</label>
+                    <input id="cut-image" placeholder="https://example.com/hero.jpg" />
+                  </div>
+                </div>
+                <div class="flex">
+                  <div style="flex: 1;">
+                    <label for="cut-text-main">メインテロップ</label>
+                    <input id="cut-text-main" placeholder="例: 春の新作、解禁。" />
+                  </div>
+                  <div style="flex: 1;">
+                    <label for="cut-text-sub">サブテロップ</label>
+                    <input id="cut-text-sub" placeholder="例: 3日間限定オファー" />
+                  </div>
+                </div>
+                <div class="flex">
+                  <div style="flex: 1;">
+                    <label for="cut-transition">テキストトランジション</label>
+                    <select id="cut-transition"></select>
+                  </div>
+                  <div style="flex: 1;">
+                    <label for="cut-animation">テキストアニメーション</label>
+                    <select id="cut-animation"></select>
+                  </div>
+                </div>
+                <div class="cut-actions">
+                  <button class="button secondary" type="button" id="save-cut">このカットを保存</button>
+                  <button class="button secondary" type="button" id="remove-cut">このカットを削除</button>
+                </div>
+                <div class="cut-preview">
+                  <div class="video-stage" id="cut-preview-stage">
+                    <div class="video-stage-inner" id="cut-preview-inner">
+                      <div class="video-text" id="cut-preview-text">
+                        <h2 id="cut-preview-main"></h2>
+                        <p id="cut-preview-sub"></p>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="notice">カットの見え方を簡易的に表示します。</p>
+                </div>
+              </div>
             </div>
             <div>
               <div class="flex" style="justify-content: space-between; align-items: center;">
@@ -86,7 +123,7 @@
                 <button class="button secondary" type="button" id="upload-media">アップロード</button>
               </div>
               <div class="list" id="media-list"></div>
-              <p class="notice">クリックすると画像URLに追加されます。</p>
+              <p class="notice">クリックすると現在のカット画像に設定されます。</p>
             </div>
             <div>
               <label for="bgm">BGM</label>
@@ -145,11 +182,15 @@
         youtube: { label: "YouTube", resolution: "1920x1080", aspect: "16:9" },
         promotion: { label: "プロモーション/広告", resolution: "1080x1350", aspect: "4:5" }
       };
-      const TEMPLATE_OPTIONS = [
-        { id: "modern_15", label: "Modern: シンプル & クリーン", durationSec: 15, scenes: 4 },
-        { id: "pop_15", label: "Pop: 元気 & 親しみ", durationSec: 15, scenes: 4 },
-        { id: "corporate_30", label: "Corporate: 信頼と実績", durationSec: 30, scenes: 7 },
-        { id: "elegant_30", label: "Elegant: ラグジュアリー", durationSec: 30, scenes: 7 }
+      const TRANSITION_OPTIONS = [
+        { id: "fade", label: "フェード" },
+        { id: "none", label: "なし" }
+      ];
+      const ANIMATION_OPTIONS = [
+        { id: "slide", label: "スライド" },
+        { id: "float", label: "ゆらぎ" },
+        { id: "pop", label: "ポップ" },
+        { id: "none", label: "なし" }
       ];
 
       const form = document.getElementById("job-form");
@@ -158,6 +199,7 @@
       const approveButton = document.getElementById("approve");
       const jobList = document.getElementById("job-list");
       const resolutionLabel = document.getElementById("resolution");
+      const durationTotalLabel = document.getElementById("duration-total");
       const customerMeta = document.getElementById("customer-meta");
       const mediaList = document.getElementById("media-list");
       const refreshMediaButton = document.getElementById("refresh-media");
@@ -170,22 +212,41 @@
       const hearingChat = document.getElementById("hearing-chat");
       const openHearingChat = document.getElementById("open-hearing-chat");
       const closeHearingChat = document.getElementById("close-hearing-chat");
+      const cutTrack = document.getElementById("cut-track");
+      const cutPrev = document.getElementById("cut-prev");
+      const cutNext = document.getElementById("cut-next");
+      const addCutButton = document.getElementById("add-cut");
+      const removeCutButton = document.getElementById("remove-cut");
+      const saveCutButton = document.getElementById("save-cut");
+      const cutPreviewStage = document.getElementById("cut-preview-stage");
+      const cutPreviewInner = document.getElementById("cut-preview-inner");
+      const cutPreviewMain = document.getElementById("cut-preview-main");
+      const cutPreviewSub = document.getElementById("cut-preview-sub");
 
       const fields = {
         customerName: document.getElementById("customer-name"),
         purpose: document.getElementById("purpose"),
-        templateId: document.getElementById("template-id"),
-        duration: document.getElementById("duration"),
-        telopMain: document.getElementById("telop-main"),
-        telopSub: document.getElementById("telop-sub"),
+        durationTotal: document.getElementById("duration-total"),
         colorPrimary: document.getElementById("color-primary"),
         colorAccent: document.getElementById("color-accent"),
-        imageUrls: document.getElementById("image-urls"),
         bgm: document.getElementById("bgm")
+      };
+
+      const cutFields = {
+        duration: document.getElementById("cut-duration"),
+        imageUrl: document.getElementById("cut-image"),
+        textMain: document.getElementById("cut-text-main"),
+        textSub: document.getElementById("cut-text-sub"),
+        transition: document.getElementById("cut-transition"),
+        animation: document.getElementById("cut-animation")
       };
 
       let activeCustomer = null;
       let activeJob = null;
+      const cutState = {
+        cuts: [],
+        activeIndex: 0
+      };
 
       const fetchJson = async (path, options) => {
         const response = await fetch(`${PAL_DB_ORIGIN}${path}`, options);
@@ -204,22 +265,160 @@
         resolutionLabel.textContent = meta.resolution;
       };
 
-      const renderTemplateOptions = () => {
-        fields.templateId.innerHTML = "";
-        TEMPLATE_OPTIONS.forEach((template) => {
+      const renderSelectOptions = (target, options) => {
+        target.innerHTML = "";
+        options.forEach((optionItem) => {
           const option = document.createElement("option");
-          option.value = template.id;
-          option.textContent = `${template.label} (${template.durationSec}s)`;
-          fields.templateId.appendChild(option);
+          option.value = optionItem.id;
+          option.textContent = optionItem.label;
+          target.appendChild(option);
         });
       };
 
-      const getTemplateById = (id) => {
-        return TEMPLATE_OPTIONS.find((template) => template.id === id) || TEMPLATE_OPTIONS[0];
+      const normalizeCut = (cut) => {
+        const durationSec = Number(cut?.durationSec);
+        const normalizedDuration = Number.isFinite(durationSec) && durationSec > 0 ? Math.round(durationSec) : 5;
+        const transition = TRANSITION_OPTIONS.some((option) => option.id === cut?.textTransition)
+          ? cut.textTransition
+          : "fade";
+        const animation = ANIMATION_OPTIONS.some((option) => option.id === cut?.textAnimation)
+          ? cut.textAnimation
+          : "slide";
+        return {
+          durationSec: normalizedDuration,
+          imageUrl: String(cut?.imageUrl || "").trim(),
+          textMain: String(cut?.textMain || "").trim(),
+          textSub: String(cut?.textSub || "").trim(),
+          textTransition: transition,
+          textAnimation: animation
+        };
       };
 
-      const getTemplateByDuration = (durationSec) => {
-        return TEMPLATE_OPTIONS.find((template) => template.durationSec === durationSec) || TEMPLATE_OPTIONS[0];
+      const updateDurationTotal = () => {
+        const total = cutState.cuts.reduce((sum, cut) => sum + (cut.durationSec || 0), 0);
+        durationTotalLabel.textContent = `${total}秒`;
+      };
+
+      const renderCutTrack = () => {
+        cutTrack.innerHTML = "";
+        cutState.cuts.forEach((cut, index) => {
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = `cut-thumb${index === cutState.activeIndex ? " active" : ""}${cut.imageUrl ? " has-image" : ""}`;
+          if (cut.imageUrl) {
+            item.style.backgroundImage = `url(${cut.imageUrl})`;
+          }
+          item.innerHTML = `
+            <span class="cut-index">#${index + 1}</span>
+            <span class="cut-duration">${cut.durationSec}s</span>
+          `;
+          item.addEventListener("click", () => {
+            setActiveCut(index);
+          });
+          cutTrack.appendChild(item);
+        });
+        updateDurationTotal();
+      };
+
+      const applyPreviewAnimation = (element, transitionType, animationType, durationSec) => {
+        const duration = Math.max(1, Number(durationSec) || 5);
+        const fade = transitionType !== "none" ? `textFade ${duration}s ease-in-out` : "";
+        let anim = "";
+        if (animationType === "slide") {
+          anim = `textSlide ${duration}s ease-out`;
+        } else if (animationType === "float") {
+          anim = `textFloat 3s ease-in-out infinite`;
+        } else if (animationType === "pop") {
+          anim = `textPop ${Math.min(duration, 3)}s ease-out`;
+        }
+        const combined = [fade, anim].filter(Boolean).join(", ");
+        element.style.animation = "none";
+        element.offsetHeight;
+        element.style.animation = combined || "none";
+      };
+
+      const updateCutPreview = () => {
+        const cut = cutState.cuts[cutState.activeIndex];
+        if (!cut) return;
+        const meta = deriveResolution(fields.purpose.value);
+        const resolution = meta.resolution.split("x").map((item) => Number(item));
+        const aspect = resolution[1] && resolution[0] ? (resolution[1] / resolution[0]) * 100 : 177.78;
+        cutPreviewStage.style.setProperty("--aspect", `${aspect}%`);
+        if (cut.imageUrl) {
+          cutPreviewInner.style.backgroundImage = `url(${cut.imageUrl})`;
+        } else {
+          cutPreviewInner.style.backgroundImage = `linear-gradient(140deg, ${fields.colorPrimary.value}, ${fields.colorAccent.value})`;
+        }
+        cutPreviewMain.textContent = cut.textMain || "メインテロップ";
+        cutPreviewSub.textContent = cut.textSub || "サブテロップ";
+        applyPreviewAnimation(cutPreviewMain, cut.textTransition, cut.textAnimation, cut.durationSec);
+        applyPreviewAnimation(cutPreviewSub, cut.textTransition, cut.textAnimation, cut.durationSec);
+      };
+
+      const syncActiveCutFromFields = () => {
+        const cut = cutState.cuts[cutState.activeIndex];
+        if (!cut) return;
+        cut.durationSec = Number(cutFields.duration.value) || cut.durationSec || 5;
+        cut.imageUrl = String(cutFields.imageUrl.value || "").trim();
+        cut.textMain = String(cutFields.textMain.value || "").trim();
+        cut.textSub = String(cutFields.textSub.value || "").trim();
+        cut.textTransition = cutFields.transition.value;
+        cut.textAnimation = cutFields.animation.value;
+        renderCutTrack();
+        updateCutPreview();
+      };
+
+      const updateCutEditor = () => {
+        const cut = cutState.cuts[cutState.activeIndex];
+        if (!cut) return;
+        cutFields.duration.value = String(cut.durationSec || 5);
+        cutFields.imageUrl.value = cut.imageUrl || "";
+        cutFields.textMain.value = cut.textMain || "";
+        cutFields.textSub.value = cut.textSub || "";
+        cutFields.transition.value = cut.textTransition || "fade";
+        cutFields.animation.value = cut.textAnimation || "slide";
+        updateCutPreview();
+      };
+
+      const setActiveCut = (index) => {
+        if (index < 0 || index >= cutState.cuts.length) return;
+        cutState.activeIndex = index;
+        renderCutTrack();
+        updateCutEditor();
+      };
+
+      const setCuts = (cuts) => {
+        cutState.cuts = cuts.length > 0 ? cuts : [normalizeCut({})];
+        cutState.activeIndex = 0;
+        renderCutTrack();
+        updateCutEditor();
+      };
+
+      const addCut = () => {
+        cutState.cuts.push(normalizeCut({}));
+        setActiveCut(cutState.cuts.length - 1);
+      };
+
+      const removeCut = () => {
+        if (cutState.cuts.length <= 1) return;
+        cutState.cuts.splice(cutState.activeIndex, 1);
+        const nextIndex = Math.max(0, cutState.activeIndex - 1);
+        setActiveCut(nextIndex);
+      };
+
+      const buildCutsFromPayload = (payload) => {
+        const rawCuts = Array.isArray(payload?.cuts) ? payload.cuts : [];
+        if (rawCuts.length > 0) {
+          return rawCuts.map((cut) => normalizeCut(cut));
+        }
+        const fallbackDuration = Number(payload?.durationSec) || 10;
+        const fallbackImageUrl = Array.isArray(payload?.imageUrls) ? payload.imageUrls[0] : "";
+        return [normalizeCut({
+          durationSec: fallbackDuration,
+          imageUrl: fallbackImageUrl,
+          textMain: payload?.telopMain || "",
+          textSub: payload?.telopSub || ""
+        })];
       };
 
       const resetForm = () => {
@@ -228,39 +427,34 @@
         fields.customerName.value = "";
         customerMeta.textContent = "paletteId: - / plan: -";
         fields.purpose.value = "instagram_reel";
-        fields.templateId.value = TEMPLATE_OPTIONS[0].id;
-        fields.duration.value = "30";
-        fields.telopMain.value = "";
-        fields.telopSub.value = "";
         fields.colorPrimary.value = "#E95464";
         fields.colorAccent.value = "#1c9a8b";
-        fields.imageUrls.value = "";
         fields.bgm.value = "light";
-        fields.duration.value = String(TEMPLATE_OPTIONS[0].durationSec);
         mediaList.innerHTML = "";
         previewLink.innerHTML = "<span class=\"notice\">まだ生成されていません。</span>";
+        setCuts([normalizeCut({})]);
         refreshResolution();
       };
 
       const buildPayload = () => {
         const meta = deriveResolution(fields.purpose.value);
         const hearingPayload = activeJob?.payload || {};
+        const cuts = cutState.cuts.map((cut) => normalizeCut(cut));
+        const durationSec = cuts.reduce((sum, cut) => sum + (cut.durationSec || 0), 0);
         return {
           customerName: fields.customerName.value.trim() || activeCustomer?.name || "",
-          templateId: fields.templateId.value,
+          templateId: hearingPayload.templateId || "",
           purpose: fields.purpose.value,
-          durationSec: Number(fields.duration.value),
+          durationSec,
           resolution: meta.resolution,
           aspect: meta.aspect,
-          telopMain: fields.telopMain.value.trim() || "テロップ未設定",
-          telopSub: fields.telopSub.value.trim() || "サブテロップ未設定",
+          telopMain: cuts[0]?.textMain || "テロップ未設定",
+          telopSub: cuts[0]?.textSub || "サブテロップ未設定",
           colorPrimary: fields.colorPrimary.value,
           colorAccent: fields.colorAccent.value,
-          imageUrls: fields.imageUrls.value
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean),
+          imageUrls: cuts.map((cut) => cut.imageUrl).filter(Boolean),
           bgm: fields.bgm.value,
+          cuts,
           hearingAnswers: hearingPayload.hearingAnswers || [],
           hearingMessages: hearingPayload.hearingMessages || []
         };
@@ -271,17 +465,10 @@
         fields.customerName.value = payload?.customerName || customer?.name || "";
         customerMeta.textContent = `paletteId: ${customer?.paletteId || "-"} / plan: ${customer?.planCode || "-"}`;
         fields.purpose.value = payload?.purpose || "instagram_reel";
-        const template = payload?.templateId
-          ? getTemplateById(payload.templateId)
-          : getTemplateByDuration(Number(payload?.durationSec || 30));
-        fields.templateId.value = template.id;
-        fields.duration.value = String(payload?.durationSec || template.durationSec);
-        fields.telopMain.value = payload?.telopMain || "";
-        fields.telopSub.value = payload?.telopSub || "";
         fields.colorPrimary.value = payload?.colorPrimary || "#E95464";
         fields.colorAccent.value = payload?.colorAccent || "#1c9a8b";
-        fields.imageUrls.value = (payload?.imageUrls || []).join("\n");
         fields.bgm.value = payload?.bgm || "light";
+        setCuts(buildCutsFromPayload(payload));
         refreshResolution();
       };
 
@@ -370,11 +557,14 @@
         }
       };
 
-      const appendImageUrl = (url) => {
+      const setCutImageUrl = (url) => {
         if (!url) return;
-        const current = fields.imageUrls.value.trim();
-        const next = current ? `${current}\n${url}` : url;
-        fields.imageUrls.value = next;
+        const cut = cutState.cuts[cutState.activeIndex];
+        if (!cut) return;
+        cut.imageUrl = url;
+        cutFields.imageUrl.value = url;
+        renderCutTrack();
+        updateCutPreview();
       };
 
       const loadMediaAssets = async (paletteId) => {
@@ -400,7 +590,7 @@
               <button class=\"button secondary\" type=\"button\">この画像を追加</button>
             `;
             row.querySelector("button").addEventListener("click", () => {
-              appendImageUrl(asset.url);
+              setCutImageUrl(asset.url);
             });
             mediaList.appendChild(row);
           });
@@ -582,9 +772,32 @@
         resetButton.addEventListener("click", resetForm);
       }
       fields.purpose.addEventListener("change", refreshResolution);
-      fields.templateId.addEventListener("change", (event) => {
-        const template = getTemplateById(event.target.value);
-        fields.duration.value = String(template.durationSec);
+      [
+        cutFields.duration,
+        cutFields.imageUrl,
+        cutFields.textMain,
+        cutFields.textSub,
+        cutFields.transition,
+        cutFields.animation
+      ].forEach((field) => {
+        field.addEventListener("input", syncActiveCutFromFields);
+        field.addEventListener("change", syncActiveCutFromFields);
+      });
+      cutPrev.addEventListener("click", () => {
+        setActiveCut(Math.max(0, cutState.activeIndex - 1));
+      });
+      cutNext.addEventListener("click", () => {
+        setActiveCut(Math.min(cutState.cuts.length - 1, cutState.activeIndex + 1));
+      });
+      addCutButton.addEventListener("click", addCut);
+      removeCutButton.addEventListener("click", removeCut);
+      saveCutButton.addEventListener("click", async () => {
+        if (!activeCustomer?.paletteId) {
+          alert("顧客を選択してください。");
+          return;
+        }
+        await saveJob();
+        alert("カット内容を保存しました。");
       });
       refreshMediaButton.addEventListener("click", async () => {
         if (activeCustomer?.paletteId) {
@@ -602,8 +815,9 @@
         if (event.target === hearingModal) hearingModal.classList.remove("active");
       });
 
+      renderSelectOptions(cutFields.transition, TRANSITION_OPTIONS);
+      renderSelectOptions(cutFields.animation, ANIMATION_OPTIONS);
       resetForm();
-      renderTemplateOptions();
       refreshResolution();
       loadCustomersFromPalDb();
     </script>
