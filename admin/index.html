@@ -101,6 +101,7 @@
               <button class="button secondary" type="button" id="generate-preview">プレビュー生成</button>
               <button class="button secondary" type="button" id="approve">顧客OK</button>
             </div>
+            <div class="flex" id="generate-status"></div>
             <div>
               <label>生成済みプレビューURL</label>
               <div class="flex" id="preview-link"></div>
@@ -161,6 +162,7 @@
       const mediaList = document.getElementById("media-list");
       const refreshMediaButton = document.getElementById("refresh-media");
       const previewLink = document.getElementById("preview-link");
+      const generateStatus = document.getElementById("generate-status");
       const mediaUploadInput = document.getElementById("media-upload");
       const uploadMediaButton = document.getElementById("upload-media");
       const hearingAnswers = document.getElementById("hearing-answers");
@@ -288,6 +290,16 @@
           previewLink.innerHTML = `<a class=\"button secondary\" href=\"${job.previewUrl}\" target=\"_blank\">プレビューを開く</a>`;
         } else {
           previewLink.innerHTML = "<span class=\"notice\">まだ生成されていません。</span>";
+        }
+      };
+
+      const setGenerating = (isGenerating) => {
+        if (isGenerating) {
+          generateButton.disabled = true;
+          generateStatus.innerHTML = `<div class=\"spinner\"></div><span class=\"notice\">生成中...</span>`;
+        } else {
+          generateButton.disabled = false;
+          generateStatus.innerHTML = "";
         }
       };
 
@@ -534,6 +546,7 @@
       generateButton.addEventListener("click", async () => {
         const saved = await saveJob({ status: "確認中" });
         if (!saved?.id) return;
+        setGenerating(true);
         try {
           const response = await fetch(`${PAL_DB_ORIGIN}/api/pal-video/generate`, {
             method: "POST",
@@ -545,12 +558,15 @@
             throw new Error(data?.error || "動画生成に失敗しました。");
           }
           activeJob = data.job || activeJob;
+          updatePreviewLink(activeJob || null);
           if (activeJob?.previewUrl) {
             window.open(activeJob.previewUrl, "_blank");
           }
         } catch (error) {
           console.error(error);
           alert(`動画生成に失敗しました。\n${error?.message || ''}`);
+        } finally {
+          setGenerating(false);
         }
       });
 
