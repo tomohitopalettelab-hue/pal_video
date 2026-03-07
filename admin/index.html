@@ -389,10 +389,19 @@
       generateButton.addEventListener("click", async () => {
         const saved = await saveJob({ status: "確認中" });
         if (!saved?.id) return;
-        const previewUrl = `../preview/?jobId=${saved.id}`;
-        const updated = await saveJob({ status: "確認中", previewUrl });
-        if (updated?.previewUrl) {
-          window.open(updated.previewUrl, "_blank");
+        try {
+          const generated = await fetchJson("/api/pal-video/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jobId: saved.id }),
+          });
+          activeJob = generated.job || activeJob;
+          if (activeJob?.previewUrl) {
+            window.open(activeJob.previewUrl, "_blank");
+          }
+        } catch (error) {
+          console.error(error);
+          alert("動画生成に失敗しました。サーバー設定を確認してください。");
         }
       });
 
