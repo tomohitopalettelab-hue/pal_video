@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pal_video admin (lite)</title>
+    <link rel="stylesheet" href="../assets/pal-video.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="brand">
+          <div class="brand-mark"></div>
+          <div>
+            <h1>pal_video admin</h1>
+            <p class="subtext">liteプラン専用の簡易編集・プレビュー生成</p>
+          </div>
+        </div>
+        <div class="flex">
+          <a class="button secondary" href="../index.html">トップへ</a>
+          <button class="button" id="reset-form">新規案件</button>
+        </div>
+      </header>
+
+      <section class="grid">
+        <div class="card">
+          <h3>案件の編集</h3>
+          <form class="form" id="job-form">
+            <div>
+              <label for="customer-name">顧客名</label>
+              <input id="customer-name" name="customer-name" placeholder="例: Palette Cafe" required />
+            </div>
+            <div>
+              <label for="purpose">用途</label>
+              <select id="purpose" name="purpose">
+                <option value="instagram_reel">Instagramリール / ショート</option>
+                <option value="instagram_feed">Instagramフィード</option>
+                <option value="youtube">YouTube</option>
+                <option value="promotion">プロモーション/広告</option>
+              </select>
+            </div>
+            <div class="flex">
+              <div style="flex: 1;">
+                <label>解像度</label>
+                <div id="resolution" class="tag">1080x1920</div>
+              </div>
+              <div style="flex: 1;">
+                <label>尺</label>
+                <select id="duration">
+                  <option value="15">15秒</option>
+                  <option value="30" selected>30秒</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label for="telop-main">メインテロップ</label>
+              <input id="telop-main" placeholder="例: 春の新作、解禁。" />
+            </div>
+            <div>
+              <label for="telop-sub">サブテロップ</label>
+              <input id="telop-sub" placeholder="例: 3日間限定オファー" />
+            </div>
+            <div class="flex">
+              <div style="flex: 1;">
+                <label for="color-primary">メインカラー</label>
+                <input id="color-primary" type="color" value="#ff7a59" />
+              </div>
+              <div style="flex: 1;">
+                <label for="color-accent">アクセント</label>
+                <input id="color-accent" type="color" value="#1c9a8b" />
+              </div>
+            </div>
+            <div>
+              <label for="image-urls">画像URL（改行区切り）</label>
+              <textarea id="image-urls" placeholder="https://example.com/hero.jpg"></textarea>
+            </div>
+            <div>
+              <label for="bgm">BGM</label>
+              <select id="bgm">
+                <option value="light">ライト/ポップ</option>
+                <option value="cool">クール/ミニマル</option>
+                <option value="warm">ウォーム/ナチュラル</option>
+              </select>
+            </div>
+            <div class="flex">
+              <button class="button" type="submit">保存</button>
+              <button class="button secondary" type="button" id="generate-preview">プレビュー生成</button>
+              <button class="button secondary" type="button" id="approve">顧客OK</button>
+            </div>
+            <p class="notice">※ 編集内容はこの画面を開いている間だけ保持されます。</p>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3>案件一覧</h3>
+          <div class="list" id="job-list"></div>
+        </div>
+
+        <div class="card" id="hearing-card">
+          <div class="flex" style="justify-content: space-between; align-items: center;">
+            <h3>ヒアリング内容</h3>
+            <button class="button secondary" type="button" id="open-hearing-chat">チャット表示</button>
+          </div>
+          <div class="list" id="hearing-answers"></div>
+          <p class="notice">pal_aiのヒアリング内容を表示します。</p>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="hearing-modal">
+      <div class="modal-content">
+        <div class="flex" style="justify-content: space-between; align-items: center;">
+          <strong>ヒアリング会話</strong>
+          <button class="button secondary" type="button" id="close-hearing-chat">閉じる</button>
+        </div>
+        <div class="chat-list" id="hearing-chat"></div>
+      </div>
+    </div>
+
+    <script>
+      const PAL_DB_ORIGIN = "http://localhost:3100";
+      const PLAN_CODES = ["pal_video_lite", "pal_video_standard", "pal_video_pro"];
+      const PURPOSES = {
+        instagram_reel: { label: "Instagramリール / ショート", resolution: "1080x1920", aspect: "9:16" },
+        instagram_feed: { label: "Instagramフィード", resolution: "1080x1080", aspect: "1:1" },
+        youtube: { label: "YouTube", resolution: "1920x1080", aspect: "16:9" },
+        promotion: { label: "プロモーション/広告", resolution: "1080x1350", aspect: "4:5" }
+      };
+
+      const form = document.getElementById("job-form");
+      const resetButton = document.getElementById("reset-form");
+      const generateButton = document.getElementById("generate-preview");
+      const approveButton = document.getElementById("approve");
+      const jobList = document.getElementById("job-list");
+      const resolutionLabel = document.getElementById("resolution");
+      const hearingAnswers = document.getElementById("hearing-answers");
+      const hearingModal = document.getElementById("hearing-modal");
+      const hearingChat = document.getElementById("hearing-chat");
+      const openHearingChat = document.getElementById("open-hearing-chat");
+      const closeHearingChat = document.getElementById("close-hearing-chat");
+
+      const fields = {
+        customerName: document.getElementById("customer-name"),
+        purpose: document.getElementById("purpose"),
+        duration: document.getElementById("duration"),
+        telopMain: document.getElementById("telop-main"),
+        telopSub: document.getElementById("telop-sub"),
+        colorPrimary: document.getElementById("color-primary"),
+        colorAccent: document.getElementById("color-accent"),
+        imageUrls: document.getElementById("image-urls"),
+        bgm: document.getElementById("bgm")
+      };
+
+      let activeCustomer = null;
+      let activeJob = null;
+
+      const fetchJson = async (path, options) => {
+        const response = await fetch(`${PAL_DB_ORIGIN}${path}`, options);
+        if (!response.ok) {
+          throw new Error(`pal_db error: ${response.status}`);
+        }
+        return response.json();
+      };
+
+      const deriveResolution = (purpose) => {
+        return PURPOSES[purpose] || PURPOSES.instagram_reel;
+      };
+
+      const refreshResolution = () => {
+        const meta = deriveResolution(fields.purpose.value);
+        resolutionLabel.textContent = meta.resolution;
+      };
+
+      const resetForm = () => {
+        activeCustomer = null;
+        activeJob = null;
+        fields.customerName.value = "";
+        fields.purpose.value = "instagram_reel";
+        fields.duration.value = "30";
+        fields.telopMain.value = "";
+        fields.telopSub.value = "";
+        fields.colorPrimary.value = "#ff7a59";
+        fields.colorAccent.value = "#1c9a8b";
+        fields.imageUrls.value = "";
+        fields.bgm.value = "light";
+        refreshResolution();
+      };
+
+      const buildPayload = () => {
+        const meta = deriveResolution(fields.purpose.value);
+        const hearingPayload = activeJob?.payload || {};
+        return {
+          customerName: fields.customerName.value.trim(),
+          purpose: fields.purpose.value,
+          durationSec: Number(fields.duration.value),
+          resolution: meta.resolution,
+          aspect: meta.aspect,
+          telopMain: fields.telopMain.value.trim() || "テロップ未設定",
+          telopSub: fields.telopSub.value.trim() || "サブテロップ未設定",
+          colorPrimary: fields.colorPrimary.value,
+          colorAccent: fields.colorAccent.value,
+          imageUrls: fields.imageUrls.value
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean),
+          bgm: fields.bgm.value,
+          hearingAnswers: hearingPayload.hearingAnswers || [],
+          hearingMessages: hearingPayload.hearingMessages || []
+        };
+      };
+
+      const populateForm = (customer, payload) => {
+        activeCustomer = customer;
+        fields.customerName.value = payload?.customerName || customer?.name || "";
+        fields.purpose.value = payload?.purpose || "instagram_reel";
+        fields.duration.value = String(payload?.durationSec || 30);
+        fields.telopMain.value = payload?.telopMain || "";
+        fields.telopSub.value = payload?.telopSub || "";
+        fields.colorPrimary.value = payload?.colorPrimary || "#ff7a59";
+        fields.colorAccent.value = payload?.colorAccent || "#1c9a8b";
+        fields.imageUrls.value = (payload?.imageUrls || []).join("\n");
+        fields.bgm.value = payload?.bgm || "light";
+        refreshResolution();
+      };
+
+      const renderCustomers = (customers) => {
+        jobList.innerHTML = "";
+        if (customers.length === 0) {
+          jobList.innerHTML = "<p class=\"notice\">pal_dbに対象プランの契約者がいません。</p>";
+          return;
+        }
+        customers.forEach((customer) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.style.cursor = "pointer";
+          card.innerHTML = `
+            <div class="flex" style="justify-content: space-between;">
+              <div>
+                <strong>${customer.name || "名称未設定"}</strong>
+                <div class="notice">${customer.planLabel || customer.planCode}</div>
+              </div>
+              <span class="badge">${customer.planCode}</span>
+            </div>
+            <div class="notice">paletteId: ${customer.paletteId}</div>
+          `;
+          card.addEventListener("click", () => {
+            loadLatestJob(customer);
+          });
+          jobList.appendChild(card);
+        });
+      };
+
+      const buildChatMessages = (payload) => {
+        const messages = Array.isArray(payload?.hearingMessages) ? payload.hearingMessages : [];
+        if (messages.length > 0) return messages;
+        const answers = Array.isArray(payload?.hearingAnswers) ? payload.hearingAnswers : [];
+        return answers.flatMap((item) => {
+          const rows = [];
+          if (item?.q) rows.push({ role: 'assistant', content: String(item.q) });
+          if (item?.a) rows.push({ role: 'user', content: String(item.a) });
+          return rows;
+        });
+      };
+
+      const updateHearingView = (payload) => {
+        const answers = Array.isArray(payload?.hearingAnswers) ? payload.hearingAnswers : [];
+        hearingAnswers.innerHTML = "";
+        if (answers.length === 0) {
+          hearingAnswers.innerHTML = "<p class=\"notice\">ヒアリング内容がまだありません。</p>";
+        } else {
+          answers.forEach((item) => {
+            const row = document.createElement("div");
+            row.innerHTML = `<strong>Q.</strong> ${item.q || ''}<br/><strong>A.</strong> ${item.a || ''}`;
+            hearingAnswers.appendChild(row);
+          });
+        }
+
+        const chatMessages = buildChatMessages(payload);
+        hearingChat.innerHTML = "";
+        if (chatMessages.length === 0) {
+          hearingChat.innerHTML = "<p class=\"notice\">チャット履歴がありません。</p>";
+        } else {
+          chatMessages.forEach((msg) => {
+            const bubble = document.createElement("div");
+            const role = msg.role === 'user' ? 'user' : 'assistant';
+            bubble.className = `chat-bubble ${role}`;
+            bubble.textContent = msg.content || '';
+            hearingChat.appendChild(bubble);
+          });
+        }
+      };
+
+      const loadCustomersFromPalDb = async () => {
+        try {
+          const activeOn = new Date().toISOString().slice(0, 10);
+          const [plansRes, contractsRes, accountsRes] = await Promise.all([
+            fetchJson("/api/plans?includeInactive=1"),
+            fetchJson(`/api/contracts?activeOn=${activeOn}`),
+            fetchJson("/api/accounts"),
+          ]);
+
+          const plans = Array.isArray(plansRes.plans) ? plansRes.plans : [];
+          const contracts = Array.isArray(contractsRes.contracts) ? contractsRes.contracts : [];
+          const accounts = Array.isArray(accountsRes.accounts) ? accountsRes.accounts : [];
+
+          const planMap = new Map(plans.map((plan) => [plan.id, plan]));
+          const accountMap = new Map(accounts.map((account) => [account.id, account]));
+
+          const entries = contracts
+            .map((contract) => {
+              const plan = planMap.get(contract.planId);
+              const account = accountMap.get(contract.accountId);
+              if (!plan || !account) return null;
+              if (!PLAN_CODES.includes(String(plan.code))) return null;
+              return {
+                paletteId: account.paletteId,
+                name: account.name,
+                planCode: plan.code,
+                planLabel: plan.name,
+                startDate: contract.startDate,
+                updatedAt: contract.updatedAt || contract.startDate,
+              };
+            })
+            .filter(Boolean);
+
+          const byPalette = new Map();
+          entries.forEach((entry) => {
+            const prev = byPalette.get(entry.paletteId);
+            if (!prev || new Date(entry.updatedAt) > new Date(prev.updatedAt)) {
+              byPalette.set(entry.paletteId, entry);
+            }
+          });
+
+          const normalized = Array.from(byPalette.values()).sort((a, b) => {
+            return String(a.paletteId).localeCompare(String(b.paletteId));
+          });
+
+          renderCustomers(normalized);
+        } catch (error) {
+          console.error(error);
+          jobList.innerHTML = "<p class=\"notice\">pal_dbに接続できません。</p>";
+        }
+      };
+
+      const loadLatestJob = async (customer) => {
+        try {
+          const response = await fetchJson(`/api/pal-video/jobs?paletteId=${customer.paletteId}&limit=1`);
+          const jobs = Array.isArray(response.jobs) ? response.jobs : [];
+          const latest = jobs[0] || null;
+          activeJob = latest;
+          populateForm(customer, latest?.payload || null);
+          updateHearingView(latest?.payload || null);
+        } catch (error) {
+          console.error(error);
+          activeJob = null;
+          populateForm(customer, null);
+          updateHearingView(null);
+        }
+      };
+
+      const saveJob = async (overrides = {}) => {
+        if (!activeCustomer?.paletteId) return null;
+        const payload = buildPayload();
+        const body = {
+          id: activeJob?.id,
+          paletteId: activeCustomer.paletteId,
+          planCode: activeCustomer.planCode,
+          status: overrides.status || activeJob?.status || "編集中",
+          payload,
+          previewUrl: overrides.previewUrl || activeJob?.previewUrl || null,
+          youtubeUrl: overrides.youtubeUrl || activeJob?.youtubeUrl || null,
+        };
+        const response = await fetchJson("/api/pal-video/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        activeJob = response.job || null;
+        updateHearingView(activeJob?.payload || null);
+        return activeJob;
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await saveJob();
+      });
+
+      generateButton.addEventListener("click", async () => {
+        const saved = await saveJob({ status: "確認中" });
+        if (!saved?.id) return;
+        const previewUrl = `../preview/?jobId=${saved.id}`;
+        const updated = await saveJob({ status: "確認中", previewUrl });
+        if (updated?.previewUrl) {
+          window.open(updated.previewUrl, "_blank");
+        }
+      });
+
+      approveButton.addEventListener("click", async () => {
+        const saved = await saveJob({ status: "承認済" });
+        if (!saved?.id) return;
+        const youtubeUrl = `https://youtu.be/mock-${saved.id}`;
+        await saveJob({ status: "承認済", youtubeUrl });
+        alert("顧客OK: YouTube自動アップはAPI接続後に有効になります。");
+      });
+
+      resetButton.addEventListener("click", resetForm);
+      fields.purpose.addEventListener("change", refreshResolution);
+      openHearingChat.addEventListener("click", () => {
+        hearingModal.classList.add("active");
+      });
+      closeHearingChat.addEventListener("click", () => {
+        hearingModal.classList.remove("active");
+      });
+      hearingModal.addEventListener("click", (event) => {
+        if (event.target === hearingModal) hearingModal.classList.remove("active");
+      });
+
+      resetForm();
+      refreshResolution();
+      loadCustomersFromPalDb();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pal_video preview</title>
+    <link rel="stylesheet" href="../assets/pal-video.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="brand">
+          <div class="brand-mark"></div>
+          <div>
+            <h1>プレビュー</h1>
+            <p class="subtext">liteプランのモックプレビューです</p>
+          </div>
+        </div>
+        <div class="flex">
+          <a class="button secondary" href="../admin/index.html">管理画面へ戻る</a>
+        </div>
+      </header>
+
+      <section class="grid">
+        <div class="card">
+          <h3>動画イメージ</h3>
+          <div class="video-stage" id="video-stage">
+            <div class="video-stage-inner" id="video-inner">
+              <div class="video-text">
+                <h2 id="telop-main">テロップ未設定</h2>
+                <p id="telop-sub">サブテロップ未設定</p>
+              </div>
+            </div>
+          </div>
+          <p class="notice">※ 本番はFFmpegで生成したmp4がここに表示されます。</p>
+        </div>
+
+        <div class="card">
+          <h3>案件情報</h3>
+          <div class="list" id="job-detail"></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const PAL_DB_ORIGIN = "http://localhost:3100";
+      const PURPOSES = {
+        instagram_reel: { label: "Instagramリール / ショート", resolution: "1080x1920", aspect: "9:16" },
+        instagram_feed: { label: "Instagramフィード", resolution: "1080x1080", aspect: "1:1" },
+        youtube: { label: "YouTube", resolution: "1920x1080", aspect: "16:9" },
+        promotion: { label: "プロモーション/広告", resolution: "1080x1350", aspect: "4:5" }
+      };
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const jobId = urlParams.get("jobId");
+      const detail = document.getElementById("job-detail");
+      const stage = document.getElementById("video-stage");
+      const inner = document.getElementById("video-inner");
+      const telopMain = document.getElementById("telop-main");
+      const telopSub = document.getElementById("telop-sub");
+
+      const applyDraft = (draft) => {
+        const meta = PURPOSES[draft.purpose] || PURPOSES.instagram_reel;
+        const aspectRatio = meta.aspect.split(":").map(Number);
+        const paddingTop = aspectRatio.length === 2 ? (aspectRatio[1] / aspectRatio[0]) * 100 : 56.25;
+        stage.style.setProperty("--aspect", `${paddingTop}%`);
+        inner.style.backgroundImage = draft.imageUrls?.[0] ? `url(${draft.imageUrls[0]})` : "none";
+        inner.style.backgroundColor = draft.colorPrimary || "#ff7a59";
+        inner.style.border = `3px solid ${draft.colorAccent || "#1c9a8b"}`;
+
+        telopMain.textContent = draft.telopMain || "テロップ未設定";
+        telopSub.textContent = draft.telopSub || "サブテロップ未設定";
+
+        detail.innerHTML = `
+          <div class="list">
+            <div><span class="tag">${meta.label}</span></div>
+            <div><strong>顧客名:</strong> ${draft.customerName || "未設定"}</div>
+            <div><strong>尺:</strong> ${draft.durationSec}s</div>
+            <div><strong>解像度:</strong> ${meta.resolution}</div>
+            <div><strong>BGM:</strong> ${draft.bgm}</div>
+            <div><strong>画像数:</strong> ${(draft.imageUrls || []).length}枚</div>
+          </div>
+        `;
+      };
+
+      const fallbackDraft = () => ({
+        customerName: urlParams.get("customer") || "",
+        purpose: urlParams.get("purpose") || "instagram_reel",
+        durationSec: Number(urlParams.get("duration") || 30),
+        telopMain: urlParams.get("telopMain") || "テロップ未設定",
+        telopSub: urlParams.get("telopSub") || "サブテロップ未設定",
+        colorPrimary: urlParams.get("colorPrimary") || "#ff7a59",
+        colorAccent: urlParams.get("colorAccent") || "#1c9a8b",
+        bgm: urlParams.get("bgm") || "light",
+        imageUrls: (urlParams.get("images") || "")
+          .split("|")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      });
+
+      const loadJob = async () => {
+        if (!jobId) return null;
+        const response = await fetch(`${PAL_DB_ORIGIN}/api/pal-video/jobs/${jobId}`);
+        if (!response.ok) throw new Error("failed to load job");
+        const data = await response.json();
+        return data.job || null;
+      };
+
+      (async () => {
+        try {
+          const job = await loadJob();
+          if (job?.payload) {
+            applyDraft(job.payload);
+            return;
+          }
+          applyDraft(fallbackDraft());
+        } catch (error) {
+          console.error(error);
+          applyDraft(fallbackDraft());
+        }
+      })();
+    </script>
+  </body>
+</html>
