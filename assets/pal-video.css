@@ -111,7 +111,7 @@ header {
   cursor: pointer;
   text-decoration: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 12px 26px rgba(255, 122, 89, 0.3);
+  box-shadow: 0 12px 26px rgba(233, 84, 100, 0.3);
 }
 
 .button.secondary {
@@ -180,7 +180,7 @@ header {
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(255, 122, 89, 0.15);
+  background: rgba(233, 84, 100, 0.15);
   color: var(--accent);
 }
 
@@ -295,7 +295,7 @@ header {
 
 .chat-bubble.user {
   align-self: flex-end;
-  background: rgba(255, 122, 89, 0.18);
+  background: rgba(233, 84, 100, 0.18);
 }
 
 .chat-bubble.assistant {
