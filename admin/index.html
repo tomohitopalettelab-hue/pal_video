@@ -63,7 +63,7 @@
             <div class="flex">
               <div style="flex: 1;">
                 <label for="color-primary">メインカラー</label>
-                <input id="color-primary" type="color" value="#ff7a59" />
+                <input id="color-primary" type="color" value="#E95464" />
               </div>
               <div style="flex: 1;">
                 <label for="color-accent">アクセント</label>
@@ -179,7 +179,7 @@
         fields.duration.value = "30";
         fields.telopMain.value = "";
         fields.telopSub.value = "";
-        fields.colorPrimary.value = "#ff7a59";
+        fields.colorPrimary.value = "#E95464";
         fields.colorAccent.value = "#1c9a8b";
         fields.imageUrls.value = "";
         fields.bgm.value = "light";
@@ -216,7 +216,7 @@
         fields.duration.value = String(payload?.durationSec || 30);
         fields.telopMain.value = payload?.telopMain || "";
         fields.telopSub.value = payload?.telopSub || "";
-        fields.colorPrimary.value = payload?.colorPrimary || "#ff7a59";
+        fields.colorPrimary.value = payload?.colorPrimary || "#E95464";
         fields.colorAccent.value = payload?.colorAccent || "#1c9a8b";
         fields.imageUrls.value = (payload?.imageUrls || []).join("\n");
         fields.bgm.value = payload?.bgm || "light";
