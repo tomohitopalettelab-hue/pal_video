@@ -468,12 +468,21 @@ header {
   overflow: hidden;
 }
 
+.hearing-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  padding-right: 4px;
+  max-height: 60vh;
+}
+
 .chat-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  overflow: auto;
-  padding-right: 4px;
+  overflow: visible;
+  padding-right: 0;
 }
 
 .chat-bubble {

@@ -28,6 +28,9 @@
         <div class="card content">
           <h3>案件の編集</h3>
           <form class="form" id="job-form">
+            <div class="flex" style="justify-content: flex-end;">
+              <button class="button secondary" type="button" id="open-hearing-chat">ヒアリングを確認</button>
+            </div>
             <div>
               <label for="customer-name">顧客名</label>
               <input id="customer-name" name="customer-name" placeholder="pal_dbの顧客名が入ります" readonly />
@@ -135,9 +138,6 @@
               <div class="list" id="media-list"></div>
               <p class="notice">クリックすると現在のカット画像に設定されます。</p>
             </div>
-            <div class="flex" style="justify-content: flex-end;">
-              <button class="button secondary" type="button" id="open-hearing-chat">ヒアリングを確認</button>
-            </div>
             <div>
               <label for="bgm">BGM</label>
               <select id="bgm">
@@ -168,8 +168,10 @@
           <strong>ヒアリング会話</strong>
           <button class="button secondary" type="button" id="close-hearing-chat">閉じる</button>
         </div>
-        <div class="list" id="hearing-answers"></div>
-        <div class="chat-list" id="hearing-chat"></div>
+        <div class="hearing-scroll">
+          <div class="list" id="hearing-answers"></div>
+          <div class="chat-list" id="hearing-chat"></div>
+        </div>
       </div>
     </div>
 
