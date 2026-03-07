@@ -28,7 +28,8 @@ body {
 }
 
 main {
-  max-width: 1100px;
+  max-width: none;
+  width: 90%;
   margin: 0 auto;
   padding: 56px 24px 80px;
   display: flex;
@@ -128,7 +129,47 @@ header {
 .grid {
   display: grid;
   gap: 20px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: 1fr;
+}
+
+.tab-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tab-button {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink);
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tab-button.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(233, 84, 100, 0.35);
+}
+
+.tab-panels {
+  display: block;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
 }
 
 .list {

@@ -19,8 +19,14 @@
         <div class="flex"></div>
       </header>
 
-      <section class="grid">
-        <div class="card">
+      <section class="tab-shell">
+        <div class="tabs">
+          <button class="tab-button" type="button" data-tab="jobs">案件一覧</button>
+          <button class="tab-button active" type="button" data-tab="edit">編集</button>
+        </div>
+
+        <div class="tab-panels">
+        <div class="card tab-panel active" data-tab-panel="edit">
           <h3>案件の編集</h3>
           <form class="form" id="job-form">
             <div>
@@ -125,6 +131,9 @@
               <div class="list" id="media-list"></div>
               <p class="notice">クリックすると現在のカット画像に設定されます。</p>
             </div>
+            <div class="flex" style="justify-content: flex-end;">
+              <button class="button secondary" type="button" id="open-hearing-chat">ヒアリングを確認</button>
+            </div>
             <div>
               <label for="bgm">BGM</label>
               <select id="bgm">
@@ -147,18 +156,12 @@
           </form>
         </div>
 
-        <div class="card">
+        <div class="card tab-panel" data-tab-panel="jobs">
           <h3>案件一覧</h3>
           <div class="list" id="job-list"></div>
         </div>
 
-        <div class="card" id="hearing-card">
-          <div class="flex" style="justify-content: space-between; align-items: center;">
-            <h3>ヒアリング内容</h3>
-            <button class="button secondary" type="button" id="open-hearing-chat">チャット表示</button>
-          </div>
-          <div class="list" id="hearing-answers"></div>
-          <p class="notice">pal_aiのヒアリング内容を表示します。</p>
+        <div class="card tab-panel" id="hearing-card" data-tab-panel="hearing" style="display: none;"></div>
         </div>
       </section>
     </main>
@@ -212,6 +215,8 @@
       const hearingChat = document.getElementById("hearing-chat");
       const openHearingChat = document.getElementById("open-hearing-chat");
       const closeHearingChat = document.getElementById("close-hearing-chat");
+      const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
+      const tabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
       const cutTrack = document.getElementById("cut-track");
       const cutPrev = document.getElementById("cut-prev");
       const cutNext = document.getElementById("cut-next");
@@ -814,12 +819,28 @@
       hearingModal.addEventListener("click", (event) => {
         if (event.target === hearingModal) hearingModal.classList.remove("active");
       });
+      const setActiveTab = (tabName) => {
+        tabButtons.forEach((button) => {
+          const isActive = button.dataset.tab === tabName;
+          button.classList.toggle("active", isActive);
+        });
+        tabPanels.forEach((panel) => {
+          const isActive = panel.dataset.tabPanel === tabName;
+          panel.classList.toggle("active", isActive);
+        });
+      };
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          setActiveTab(button.dataset.tab);
+        });
+      });
 
       renderSelectOptions(cutFields.transition, TRANSITION_OPTIONS);
       renderSelectOptions(cutFields.animation, ANIMATION_OPTIONS);
       resetForm();
       refreshResolution();
       loadCustomersFromPalDb();
+      setActiveTab("edit");
     </script>
   </body>
 </html>
