@@ -390,18 +390,22 @@
         const saved = await saveJob({ status: "確認中" });
         if (!saved?.id) return;
         try {
-          const generated = await fetchJson("/api/pal-video/generate", {
+          const response = await fetch(`${PAL_DB_ORIGIN}/api/pal-video/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ jobId: saved.id }),
           });
-          activeJob = generated.job || activeJob;
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(data?.error || "動画生成に失敗しました。");
+          }
+          activeJob = data.job || activeJob;
           if (activeJob?.previewUrl) {
             window.open(activeJob.previewUrl, "_blank");
           }
         } catch (error) {
           console.error(error);
-          alert("動画生成に失敗しました。サーバー設定を確認してください。");
+          alert(`動画生成に失敗しました。\n${error?.message || ''}`);
         }
       });
 
