@@ -77,6 +77,14 @@
               <textarea id="image-urls" placeholder="https://example.com/hero.jpg"></textarea>
             </div>
             <div>
+              <div class="flex" style="justify-content: space-between; align-items: center;">
+                <label>メディア一覧（pal_db）</label>
+                <button class="button secondary" type="button" id="refresh-media">更新</button>
+              </div>
+              <div class="list" id="media-list"></div>
+              <p class="notice">クリックすると画像URLに追加されます。</p>
+            </div>
+            <div>
               <label for="bgm">BGM</label>
               <select id="bgm">
                 <option value="light">ライト/ポップ</option>
@@ -88,6 +96,10 @@
               <button class="button" type="submit">保存</button>
               <button class="button secondary" type="button" id="generate-preview">プレビュー生成</button>
               <button class="button secondary" type="button" id="approve">顧客OK</button>
+            </div>
+            <div>
+              <label>生成済みプレビューURL</label>
+              <div class="flex" id="preview-link"></div>
             </div>
             <p class="notice">※ 編集内容はこの画面を開いている間だけ保持されます。</p>
           </form>
@@ -142,6 +154,9 @@
       const jobList = document.getElementById("job-list");
       const resolutionLabel = document.getElementById("resolution");
       const customerMeta = document.getElementById("customer-meta");
+      const mediaList = document.getElementById("media-list");
+      const refreshMediaButton = document.getElementById("refresh-media");
+      const previewLink = document.getElementById("preview-link");
       const hearingAnswers = document.getElementById("hearing-answers");
       const hearingModal = document.getElementById("hearing-modal");
       const hearingChat = document.getElementById("hearing-chat");
@@ -214,6 +229,8 @@
         fields.imageUrls.value = "";
         fields.bgm.value = "light";
         fields.duration.value = String(TEMPLATE_OPTIONS[0].durationSec);
+        mediaList.innerHTML = "";
+        previewLink.innerHTML = "<span class=\"notice\">まだ生成されていません。</span>";
         refreshResolution();
       };
 
@@ -258,6 +275,14 @@
         fields.imageUrls.value = (payload?.imageUrls || []).join("\n");
         fields.bgm.value = payload?.bgm || "light";
         refreshResolution();
+      };
+
+      const updatePreviewLink = (job) => {
+        if (job?.previewUrl) {
+          previewLink.innerHTML = `<a class=\"button secondary\" href=\"${job.previewUrl}\" target=\"_blank\">プレビューを開く</a>`;
+        } else {
+          previewLink.innerHTML = "<span class=\"notice\">まだ生成されていません。</span>";
+        }
       };
 
       const renderCustomers = (customers) => {
@@ -327,6 +352,46 @@
         }
       };
 
+      const appendImageUrl = (url) => {
+        if (!url) return;
+        const current = fields.imageUrls.value.trim();
+        const next = current ? `${current}\n${url}` : url;
+        fields.imageUrls.value = next;
+      };
+
+      const loadMediaAssets = async (paletteId) => {
+        if (!paletteId) return;
+        mediaList.innerHTML = "<span class=\"notice\">読み込み中...</span>";
+        try {
+          const response = await fetchJson(`/api/media?paletteId=${paletteId}`);
+          const assets = Array.isArray(response.assets) ? response.assets : [];
+          if (assets.length === 0) {
+            mediaList.innerHTML = "<span class=\"notice\">メディアがありません。</span>";
+            return;
+          }
+          mediaList.innerHTML = "";
+          assets.forEach((asset) => {
+            const row = document.createElement("div");
+            row.className = "card";
+            row.style.display = "flex";
+            row.style.flexDirection = "column";
+            row.style.gap = "8px";
+            row.innerHTML = `
+              <img src="${asset.url}" alt="${asset.originalName || 'media'}" style="width: 100%; border-radius: 12px; object-fit: cover; max-height: 160px;" />
+              <div class=\"notice\">${asset.originalName || asset.fileName}</div>
+              <button class=\"button secondary\" type=\"button\">この画像を追加</button>
+            `;
+            row.querySelector("button").addEventListener("click", () => {
+              appendImageUrl(asset.url);
+            });
+            mediaList.appendChild(row);
+          });
+        } catch (error) {
+          console.error(error);
+          mediaList.innerHTML = "<span class=\"notice\">メディア取得に失敗しました。</span>";
+        }
+      };
+
       const loadCustomersFromPalDb = async () => {
         try {
           const activeOn = new Date().toISOString().slice(0, 10);
@@ -387,11 +452,14 @@
           activeJob = latest;
           populateForm(customer, latest?.payload || null);
           updateHearingView(latest?.payload || null);
+          updatePreviewLink(latest || null);
+          await loadMediaAssets(customer.paletteId);
         } catch (error) {
           console.error(error);
           activeJob = null;
           populateForm(customer, null);
           updateHearingView(null);
+          updatePreviewLink(null);
         }
       };
 
@@ -414,6 +482,7 @@
         });
         activeJob = response.job || null;
         updateHearingView(activeJob?.payload || null);
+        updatePreviewLink(activeJob || null);
         return activeJob;
       };
 
@@ -460,6 +529,11 @@
       fields.templateId.addEventListener("change", (event) => {
         const template = getTemplateById(event.target.value);
         fields.duration.value = String(template.durationSec);
+      });
+      refreshMediaButton.addEventListener("click", async () => {
+        if (activeCustomer?.paletteId) {
+          await loadMediaAssets(activeCustomer.paletteId);
+        }
       });
       openHearingChat.addEventListener("click", () => {
         hearingModal.classList.add("active");
