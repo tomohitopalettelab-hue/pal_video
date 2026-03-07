@@ -19,14 +19,13 @@
         <div class="flex"></div>
       </header>
 
-      <section class="tab-shell">
-        <div class="tabs">
-          <button class="tab-button" type="button" data-tab="jobs">案件一覧</button>
-          <button class="tab-button active" type="button" data-tab="edit">編集</button>
-        </div>
+      <section class="admin-shell">
+        <aside class="card sidebar">
+          <h3>案件一覧</h3>
+          <div class="list" id="job-list"></div>
+        </aside>
 
-        <div class="tab-panels">
-        <div class="card tab-panel active" data-tab-panel="edit">
+        <div class="card content">
           <h3>案件の編集</h3>
           <form class="form" id="job-form">
             <div>
@@ -63,7 +62,23 @@
                 <input id="color-accent" type="color" value="#1c9a8b" />
               </div>
             </div>
-            <div>
+            <div class="preview-block">
+              <div class="flex" style="justify-content: space-between; align-items: center;">
+                <label>プレビュー</label>
+                <span class="notice">選択中のカットを表示</span>
+              </div>
+              <div class="preview-card">
+                <div class="video-stage" id="cut-preview-stage">
+                  <div class="video-stage-inner" id="cut-preview-inner">
+                    <div class="video-text" id="cut-preview-text">
+                      <h2 id="cut-preview-main"></h2>
+                      <p id="cut-preview-sub"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="cut-block">
               <label>カット編集</label>
               <div class="cut-strip">
                 <button class="button secondary" type="button" id="cut-prev">←</button>
@@ -106,17 +121,6 @@
                   <button class="button secondary" type="button" id="save-cut">このカットを保存</button>
                   <button class="button secondary" type="button" id="remove-cut">このカットを削除</button>
                 </div>
-                <div class="cut-preview">
-                  <div class="video-stage" id="cut-preview-stage">
-                    <div class="video-stage-inner" id="cut-preview-inner">
-                      <div class="video-text" id="cut-preview-text">
-                        <h2 id="cut-preview-main"></h2>
-                        <p id="cut-preview-sub"></p>
-                      </div>
-                    </div>
-                  </div>
-                  <p class="notice">カットの見え方を簡易的に表示します。</p>
-                </div>
               </div>
             </div>
             <div>
@@ -155,14 +159,6 @@
             <p class="notice">※ 編集内容はこの画面を開いている間だけ保持されます。</p>
           </form>
         </div>
-
-        <div class="card tab-panel" data-tab-panel="jobs">
-          <h3>案件一覧</h3>
-          <div class="list" id="job-list"></div>
-        </div>
-
-        <div class="card tab-panel" id="hearing-card" data-tab-panel="hearing" style="display: none;"></div>
-        </div>
       </section>
     </main>
 
@@ -172,6 +168,7 @@
           <strong>ヒアリング会話</strong>
           <button class="button secondary" type="button" id="close-hearing-chat">閉じる</button>
         </div>
+        <div class="list" id="hearing-answers"></div>
         <div class="chat-list" id="hearing-chat"></div>
       </div>
     </div>
@@ -215,8 +212,6 @@
       const hearingChat = document.getElementById("hearing-chat");
       const openHearingChat = document.getElementById("open-hearing-chat");
       const closeHearingChat = document.getElementById("close-hearing-chat");
-      const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
-      const tabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
       const cutTrack = document.getElementById("cut-track");
       const cutPrev = document.getElementById("cut-prev");
       const cutNext = document.getElementById("cut-next");
@@ -811,6 +806,7 @@
       });
       uploadMediaButton.addEventListener("click", uploadMediaFiles);
       openHearingChat.addEventListener("click", () => {
+        updateHearingView(activeJob?.payload || null);
         hearingModal.classList.add("active");
       });
       closeHearingChat.addEventListener("click", () => {
@@ -819,28 +815,11 @@
       hearingModal.addEventListener("click", (event) => {
         if (event.target === hearingModal) hearingModal.classList.remove("active");
       });
-      const setActiveTab = (tabName) => {
-        tabButtons.forEach((button) => {
-          const isActive = button.dataset.tab === tabName;
-          button.classList.toggle("active", isActive);
-        });
-        tabPanels.forEach((panel) => {
-          const isActive = panel.dataset.tabPanel === tabName;
-          panel.classList.toggle("active", isActive);
-        });
-      };
-      tabButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-          setActiveTab(button.dataset.tab);
-        });
-      });
-
       renderSelectOptions(cutFields.transition, TRANSITION_OPTIONS);
       renderSelectOptions(cutFields.animation, ANIMATION_OPTIONS);
       resetForm();
       refreshResolution();
       loadCustomersFromPalDb();
-      setActiveTab("edit");
     </script>
   </body>
 </html>
