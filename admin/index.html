@@ -39,9 +39,15 @@
             <div>
               <label for="purpose">用途</label>
               <select id="purpose" name="purpose">
-                <option value="instagram_reel">Instagramリール / ショート</option>
+                <option value="instagram_reel">Instagramリール</option>
+                <option value="instagram_story">Instagramストーリーズ</option>
                 <option value="instagram_feed">Instagramフィード</option>
-                <option value="youtube">YouTube</option>
+                <option value="youtube">YouTube（横）</option>
+                <option value="youtube_short">YouTubeショート</option>
+                <option value="tiktok">TikTok</option>
+                <option value="x">X（旧Twitter）</option>
+                <option value="line_voom">LINE VOOM</option>
+                <option value="facebook">Facebook</option>
                 <option value="promotion">プロモーション/広告</option>
               </select>
             </div>
@@ -179,10 +185,16 @@
       const PAL_DB_ORIGIN = "https://pal-db.onrender.com";
       const PLAN_CODES = ["pal_video_lite", "pal_video_standard", "pal_video_pro"];
       const PURPOSES = {
-        instagram_reel: { label: "Instagramリール / ショート", resolution: "1080x1920", aspect: "9:16" },
-        instagram_feed: { label: "Instagramフィード", resolution: "1080x1080", aspect: "1:1" },
-        youtube: { label: "YouTube", resolution: "1920x1080", aspect: "16:9" },
-        promotion: { label: "プロモーション/広告", resolution: "1080x1350", aspect: "4:5" }
+        instagram_reel: { label: "Instagramリール", resolution: "1080x1920", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        instagram_story: { label: "Instagramストーリーズ", resolution: "1080x1920", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        instagram_feed: { label: "Instagramフィード", resolution: "1080x1080", aspect: "1:1", recommendSec: 15, cutCount: 4 },
+        youtube: { label: "YouTube（横）", resolution: "1920x1080", aspect: "16:9", recommendSec: 60, cutCount: 15 },
+        youtube_short: { label: "YouTubeショート", resolution: "1080x1920", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        tiktok: { label: "TikTok", resolution: "720x1280", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        x: { label: "X（旧Twitter）", resolution: "720x1280", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        line_voom: { label: "LINE VOOM", resolution: "720x1280", aspect: "9:16", recommendSec: 30, cutCount: 7 },
+        facebook: { label: "Facebook", resolution: "1280x720", aspect: "16:9", recommendSec: 45, cutCount: 11 },
+        promotion: { label: "プロモーション/広告", resolution: "1080x1350", aspect: "4:5", recommendSec: 30, cutCount: 7 }
       };
       const TRANSITION_OPTIONS = [
         { id: "fade", label: "フェード" },
@@ -262,9 +274,38 @@
         return PURPOSES[purpose] || PURPOSES.instagram_reel;
       };
 
+      const buildPurposeCuts = (meta) => {
+        const recommendSec = Number(meta?.recommendSec || 15);
+        const cutCount = Math.max(1, Number(meta?.cutCount || 4));
+        const baseDuration = 4;
+        const lastDuration = Math.max(1, recommendSec - baseDuration * (cutCount - 1));
+        return Array.from({ length: cutCount }).map((_, index) => normalizeCut({
+          durationSec: index === cutCount - 1 ? lastDuration : baseDuration,
+          imageUrl: "",
+          textMain: "",
+          textSub: "",
+          textTransition: "none",
+          textAnimation: "none"
+        }));
+      };
+
+      const shouldAutoApplyPurpose = () => {
+        if (cutState.cuts.length !== 1) return false;
+        const cut = cutState.cuts[0];
+        const hasContent = Boolean(cut?.imageUrl || cut?.textMain || cut?.textSub);
+        return !hasContent;
+      };
+
+      const applyPurposeDefaults = (meta, force = false) => {
+        if (!meta) return;
+        if (!force && !shouldAutoApplyPurpose()) return;
+        setCuts(buildPurposeCuts(meta));
+      };
+
       const refreshResolution = () => {
         const meta = deriveResolution(fields.purpose.value);
         resolutionLabel.textContent = meta.resolution;
+        applyPurposeDefaults(meta, false);
       };
 
       const renderSelectOptions = (target, options) => {
@@ -434,7 +475,8 @@
         fields.bgm.value = "light";
         mediaList.innerHTML = "";
         previewLink.innerHTML = "<span class=\"notice\">まだ生成されていません。</span>";
-        setCuts([normalizeCut({})]);
+        const meta = deriveResolution(fields.purpose.value);
+        applyPurposeDefaults(meta, true);
         refreshResolution();
       };
 
@@ -470,7 +512,12 @@
         fields.colorPrimary.value = payload?.colorPrimary || "#E95464";
         fields.colorAccent.value = payload?.colorAccent || "#1c9a8b";
         fields.bgm.value = payload?.bgm || "light";
-        setCuts(buildCutsFromPayload(payload));
+        const nextCuts = buildCutsFromPayload(payload);
+        if (!payload?.cuts || payload.cuts.length === 0) {
+          applyPurposeDefaults(deriveResolution(fields.purpose.value), true);
+        } else {
+          setCuts(nextCuts);
+        }
         refreshResolution();
       };
 
