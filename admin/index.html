@@ -289,6 +289,89 @@
         }));
       };
 
+      const normalizePurposeFromText = (raw) => {
+        const value = String(raw || '').toLowerCase();
+        if (/ストーリー|ストーリーズ|stories/.test(value)) return "instagram_story";
+        if (/reel|リール|ショート|short/.test(value)) return "instagram_reel";
+        if (/フィード|feed/.test(value)) return "instagram_feed";
+        if (/youtubeショート|youtube\s*short|shorts/.test(value)) return "youtube_short";
+        if (/youtube|ユーチューブ/.test(value)) return "youtube";
+        if (/tiktok|ティックトック/.test(value)) return "tiktok";
+        if (/(^|\s|\b)x(\b|\s)|twitter|ツイッター/.test(value)) return "x";
+        if (/line|voom|ライン/.test(value)) return "line_voom";
+        if (/facebook|フェイスブック/.test(value)) return "facebook";
+        if (/広告|プロモ|promotion|ad/.test(value)) return "promotion";
+        return "";
+      };
+
+      const extractUrlsFromText = (raw) => {
+        const matches = String(raw || '').match(/https?:\/\/[^\s)]+/g);
+        return Array.isArray(matches) ? matches : [];
+      };
+
+      const extractHexColorsFromText = (raw) => {
+        const matches = String(raw || '').match(/#[0-9a-fA-F]{6}/g);
+        return Array.isArray(matches) ? matches : [];
+      };
+
+      const extractDurationSecFromText = (raw) => {
+        const match = String(raw || '').match(/(\d+)\s*(秒|分)/);
+        if (!match) return null;
+        const value = Number(match[1]);
+        if (!Number.isFinite(value)) return null;
+        return match[2] === "分" ? value * 60 : value;
+      };
+
+      const splitTelop = (raw) => {
+        const text = String(raw || '').trim();
+        if (!text) return { main: "", sub: "" };
+        const parts = text.split(/[\n\/／]/).map((part) => part.trim()).filter(Boolean);
+        if (!parts.length) return { main: "", sub: "" };
+        if (parts.length === 1) return { main: parts[0], sub: "" };
+        return { main: parts[0], sub: parts.slice(1).join(" / ") };
+      };
+
+      const resolveBgmFromText = (raw) => {
+        const value = String(raw || '').toLowerCase();
+        if (/クール|cool|ミニマル|minimal/.test(value)) return "cool";
+        if (/ウォーム|ナチュラル|warm|natural/.test(value)) return "warm";
+        if (/ライト|ポップ|light|pop/.test(value)) return "light";
+        return "";
+      };
+
+      const extractHearingDetails = (payload) => {
+        const answers = Array.isArray(payload?.hearingAnswers) ? payload.hearingAnswers : [];
+        const messages = Array.isArray(payload?.hearingMessages) ? payload.hearingMessages : [];
+        const purposeAnswer = answers.find((item) => /(制作目的|用途|媒体|プラットフォーム|instagram|インスタ|youtube|tiktok|x|twitter|line|voom|facebook|広告|プロモ)/i.test(item.q))?.a || "";
+        const durationAnswer = answers.find((item) => /(尺|秒|時間|長さ|動画の長さ)/i.test(item.q))?.a || "";
+        const telopAnswer = answers.find((item) => /(テロップ|コピー|キャッチ)/i.test(item.q))?.a || "";
+        const colorAnswer = answers.find((item) => /(色|カラー|配色|トーン|雰囲気)/i.test(item.q))?.a || "";
+        const materialAnswer = answers.find((item) => /(素材|画像|写真|ロゴ|動画素材)/i.test(item.q))?.a || "";
+        const bgmAnswer = answers.find((item) => /(bgm|音楽|曲|サウンド)/i.test(item.q))?.a || "";
+
+        const purpose = normalizePurposeFromText(purposeAnswer) || normalizePurposeFromText(answers.map((item) => item.a).join(" "));
+        const durationSec = extractDurationSecFromText(durationAnswer || answers.map((item) => item.a).join(" "));
+        const telop = splitTelop(telopAnswer);
+        const colors = extractHexColorsFromText(colorAnswer);
+        const imageUrls = Array.from(new Set([
+          ...extractUrlsFromText(materialAnswer),
+          ...answers.flatMap((item) => extractUrlsFromText(item.a)),
+          ...messages.flatMap((msg) => extractUrlsFromText(msg.content))
+        ]));
+        const bgm = resolveBgmFromText(bgmAnswer || answers.map((item) => item.a).join(" "));
+
+        return {
+          purpose,
+          durationSec,
+          telopMain: telop.main,
+          telopSub: telop.sub,
+          colorPrimary: colors[0] || "",
+          colorAccent: colors[1] || "",
+          imageUrls,
+          bgm
+        };
+      };
+
       const shouldAutoApplyPurpose = () => {
         if (cutState.cuts.length !== 1) return false;
         const cut = cutState.cuts[0];
@@ -464,6 +547,22 @@
         })];
       };
 
+      const buildCutsFromHearing = (hearing, meta) => {
+        const durationSec = Number(hearing?.durationSec || meta?.recommendSec || 15);
+        const sceneCount = Math.max(1, Math.ceil(durationSec / 4));
+        const baseDuration = 4;
+        const lastDuration = Math.max(1, durationSec - baseDuration * (sceneCount - 1));
+        const images = Array.isArray(hearing?.imageUrls) ? hearing.imageUrls : [];
+        return Array.from({ length: sceneCount }).map((_, index) => normalizeCut({
+          durationSec: index === sceneCount - 1 ? lastDuration : baseDuration,
+          imageUrl: images[index] || images[0] || "",
+          textMain: index === 0 ? (hearing?.telopMain || "") : `ポイント${index + 1}`,
+          textSub: index === 0 ? (hearing?.telopSub || "") : "",
+          textTransition: "none",
+          textAnimation: "none"
+        }));
+      };
+
       const resetForm = () => {
         activeCustomer = null;
         activeJob = null;
@@ -506,18 +605,19 @@
 
       const populateForm = (customer, payload) => {
         activeCustomer = customer;
+        const hearing = extractHearingDetails(payload);
         fields.customerName.value = payload?.customerName || customer?.name || "";
         customerMeta.textContent = `paletteId: ${customer?.paletteId || "-"} / plan: ${customer?.planCode || "-"}`;
-        fields.purpose.value = payload?.purpose || "instagram_reel";
-        fields.colorPrimary.value = payload?.colorPrimary || "#E95464";
-        fields.colorAccent.value = payload?.colorAccent || "#1c9a8b";
-        fields.bgm.value = payload?.bgm || "light";
-        const nextCuts = buildCutsFromPayload(payload);
-        if (!payload?.cuts || payload.cuts.length === 0) {
-          applyPurposeDefaults(deriveResolution(fields.purpose.value), true);
-        } else {
-          setCuts(nextCuts);
-        }
+        fields.purpose.value = payload?.purpose || hearing.purpose || "instagram_reel";
+        fields.colorPrimary.value = payload?.colorPrimary || hearing.colorPrimary || "#E95464";
+        fields.colorAccent.value = payload?.colorAccent || hearing.colorAccent || "#1c9a8b";
+        fields.bgm.value = payload?.bgm || hearing.bgm || "light";
+
+        const meta = deriveResolution(fields.purpose.value);
+        const nextCuts = (!payload?.cuts || payload.cuts.length === 0)
+          ? buildCutsFromHearing(hearing, meta)
+          : buildCutsFromPayload(payload);
+        setCuts(nextCuts);
         refreshResolution();
       };
 
