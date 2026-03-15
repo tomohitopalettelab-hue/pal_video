@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pal_video admin (lite)</title>
+    <link rel="stylesheet" href="../assets/pal-video.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="brand">
+          <div class="brand-mark"></div>
+          <div>
+            <h1>pal_video admin</h1>
+            <p class="subtext">liteプラン専用の簡易編集・プレビュー生成</p>
+          </div>
+        </div>
+        <div class="flex"></div>
+      </header>
+
+      <section class="admin-shell">
+        <aside class="card sidebar">
+          <h3>案件一覧</h3>
+          <div class="list" id="job-list"></div>
+        </aside>
+
+        <div class="card content">
+          <h3>案件の編集</h3>
+          <form class="form" id="job-form">
+            <div class="flex" style="justify-content: flex-end;">
+              <button class="button secondary" type="button" id="open-hearing-chat">ヒアリングを確認</button>
+            </div>
+            <div>
+              <label for="customer-name">顧客名</label>
+              <input id="customer-name" name="customer-name" placeholder="pal_dbの顧客名が入ります" readonly />
+              <p class="notice" id="customer-meta">paletteId: - / plan: -</p>
+            </div>
+            <div>
+              <label for="purpose">用途</label>
+              <select id="purpose" name="purpose">
+                <option value="instagram_reel">Instagramリール</option>
+                <option value="instagram_story">Instagramストーリーズ</option>
+                <option value="instagram_feed">Instagramフィード</option>
+                <option value="youtube">YouTube（横）</option>
+                <option value="youtube_short">YouTubeショート</option>
+                <option value="tiktok">TikTok</option>
+                <option value="x">X（旧Twitter）</option>
+                <option value="line_voom">LINE VOOM</option>
+                <option value="facebook">Facebook</option>
+                <option value="promotion">プロモーション/広告</option>
+              </select>
+            </div>
+            <div class="flex">
+              <div style="flex: 1;">
+                <label>解像度</label>
+                <div id="resolution" class="tag">1080x1920</div>
+              </div>
+              <div style="flex: 1;">
+                <label>合計尺</label>
+                <div id="duration-total" class="tag">0秒</div>
+              </div>
+            </div>
+            <div class="flex">
+              <div style="flex: 1;">
+                <label for="color-primary">メインカラー</label>
+                <input id="color-primary" type="color" value="#E95464" />
+              </div>
+              <div style="flex: 1;">
+                <label for="color-accent">アクセント</label>
+                <input id="color-accent" type="color" value="#1c9a8b" />
+              </div>
+            </div>
+            <div class="preview-block">
+              <div class="flex" style="justify-content: space-between; align-items: center;">
+                <label>プレビュー</label>
+                <span class="notice">選択中のカットを表示</span>
+              </div>
+              <div class="preview-card">
+                <div class="video-stage" id="cut-preview-stage">
+                  <div class="video-stage-inner" id="cut-preview-inner">
+                    <div class="video-text" id="cut-preview-text">
+                      <h2 id="cut-preview-main"></h2>
+                      <p id="cut-preview-sub"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="cut-block">
+              <label>カット編集</label>
+              <div class="cut-strip">
+                <button class="button secondary" type="button" id="cut-prev">←</button>
+                <div class="cut-track" id="cut-track"></div>
+                <button class="button secondary" type="button" id="cut-next">→</button>
+                <button class="button secondary" type="button" id="add-cut">+ カット追加</button>
+              </div>
+              <div class="cut-editor" id="cut-editor">
+                <div class="flex">
+                  <div style="flex: 1;">
+                    <label for="cut-duration">秒数</label>
+                    <input id="cut-duration" type="number" min="1" step="1" />
+                  </div>
+                  <div style="flex: 1;">
+                    <label for="cut-image">画像URL</label>
+                    <input id="cut-image" placeholder="https://example.com/hero.jpg" />
+                  </div>
+                </div>
+                <div class="flex">
+                  <div style="flex: 1;">
+                    <label for="cut-text-main">メインテロップ</label>
+                    <input id="cut-text-main" placeholder="例: 春の新作、解禁。" />
+                  </div>
+                  <div style="flex: 1;">
+                    <label for="cut-text-sub">サブテロップ</label>
+                    <input id="cut-text-sub" placeholder="例: 3日間限定オファー" />
+                  </div>
+                </div>
+                <div class="flex">
+                  <div style="flex: 1;">
+                    <label for="cut-transition">テキストトランジション</label>
+                    <select id="cut-transition"></select>
+                  </div>
+                  <div style="flex: 1;">
+                    <label for="cut-animation">テキストアニメーション</label>
+                    <select id="cut-animation"></select>
+                  </div>
+                </div>
+                <div class="cut-actions">
+                  <button class="button secondary" type="button" id="save-cut">このカットを保存</button>
+                  <button class="button secondary" type="button" id="remove-cut">このカットを削除</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="flex" style="justify-content: space-between; align-items: center;">
+                <label>メディア一覧（pal_db）</label>
+                <button class="button secondary" type="button" id="refresh-media">更新</button>
+              </div>
+              <div class="flex">
+                <input id="media-upload" type="file" accept="image/*" multiple />
+                <button class="button secondary" type="button" id="upload-media">アップロード</button>
+              </div>
+              <div class="list" id="media-list"></div>
+              <p class="notice">クリックすると現在のカット画像に設定されます。</p>
+            </div>
+            <div>
+              <label for="bgm">BGM</label>
+              <select id="bgm">
+                <option value="light">ライト/ポップ</option>
+                <option value="cool">クール/ミニマル</option>
+                <option value="warm">ウォーム/ナチュラル</option>
+              </select>
+            </div>
+            <div class="flex">
+              <button class="button" type="submit">保存</button>
+              <button class="button secondary" type="button" id="generate-preview">プレビュー生成</button>
+              <button class="button secondary" type="button" id="approve">顧客OK</button>
+            </div>
+            <div class="flex" id="generate-status"></div>
+            <div>
+              <label>生成済みプレビューURL</label>
+              <div class="flex" id="preview-link"></div>
+            </div>
+            <p class="notice">※ 編集内容はこの画面を開いている間だけ保持されます。</p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="hearing-modal">
+      <div class="modal-content">
+        <div class="flex" style="justify-content: space-between; align-items: center;">
+          <strong>ヒアリング会話</strong>
+          <button class="button secondary" type="button" id="close-hearing-chat">閉じる</button>
+        </div>
+        <div class="hearing-scroll">
+          <div class="list" id="hearing-answers"></div>
+          <div class="chat-list" id="hearing-chat"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const PAL_DB_ORIGIN = "https://pal-db.onrender.com";
+      const PLAN_CODES = ["pal_video_lite", "pal_video_standard", "pal_video_pro"];
+      const PURPOSES = {
+        instagram_reel: { label: "Instagramリール", resolution: "1080x1920", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        instagram_story: { label: "Instagramストーリーズ", resolution: "1080x1920", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        instagram_feed: { label: "Instagramフィード", resolution: "1080x1080", aspect: "1:1", recommendSec: 15, cutCount: 4 },
+        youtube: { label: "YouTube（横）", resolution: "1920x1080", aspect: "16:9", recommendSec: 60, cutCount: 15 },
+        youtube_short: { label: "YouTubeショート", resolution: "1080x1920", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        tiktok: { label: "TikTok", resolution: "720x1280", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        x: { label: "X（旧Twitter）", resolution: "720x1280", aspect: "9:16", recommendSec: 15, cutCount: 4 },
+        line_voom: { label: "LINE VOOM", resolution: "720x1280", aspect: "9:16", recommendSec: 30, cutCount: 7 },
+        facebook: { label: "Facebook", resolution: "1280x720", aspect: "16:9", recommendSec: 45, cutCount: 11 },
+        promotion: { label: "プロモーション/広告", resolution: "1080x1350", aspect: "4:5", recommendSec: 30, cutCount: 7 }
+      };
+      const TRANSITION_OPTIONS = [
+        { id: "fade", label: "フェード" },
+        { id: "none", label: "なし" }
+      ];
+      const ANIMATION_OPTIONS = [
+        { id: "slide", label: "スライド" },
+        { id: "float", label: "ゆらぎ" },
+        { id: "pop", label: "ポップ" },
+        { id: "none", label: "なし" }
+      ];
+
+      const form = document.getElementById("job-form");
+      const resetButton = document.getElementById("reset-form");
+      const generateButton = document.getElementById("generate-preview");
+      const approveButton = document.getElementById("approve");
+      const jobList = document.getElementById("job-list");
+      const resolutionLabel = document.getElementById("resolution");
+      const durationTotalLabel = document.getElementById("duration-total");
+      const customerMeta = document.getElementById("customer-meta");
+      const mediaList = document.getElementById("media-list");
+      const refreshMediaButton = document.getElementById("refresh-media");
+      const previewLink = document.getElementById("preview-link");
+      const generateStatus = document.getElementById("generate-status");
+      const mediaUploadInput = document.getElementById("media-upload");
+      const uploadMediaButton = document.getElementById("upload-media");
+      const hearingAnswers = document.getElementById("hearing-answers");
+      const hearingModal = document.getElementById("hearing-modal");
+      const hearingChat = document.getElementById("hearing-chat");
+      const openHearingChat = document.getElementById("open-hearing-chat");
+      const closeHearingChat = document.getElementById("close-hearing-chat");
+      const cutTrack = document.getElementById("cut-track");
+      const cutPrev = document.getElementById("cut-prev");
+      const cutNext = document.getElementById("cut-next");
+      const addCutButton = document.getElementById("add-cut");
+      const removeCutButton = document.getElementById("remove-cut");
+      const saveCutButton = document.getElementById("save-cut");
+      const cutPreviewStage = document.getElementById("cut-preview-stage");
+      const cutPreviewInner = document.getElementById("cut-preview-inner");
+      const cutPreviewMain = document.getElementById("cut-preview-main");
+      const cutPreviewSub = document.getElementById("cut-preview-sub");
+
+      const fields = {
+        customerName: document.getElementById("customer-name"),
+        purpose: document.getElementById("purpose"),
+        durationTotal: document.getElementById("duration-total"),
+        colorPrimary: document.getElementById("color-primary"),
+        colorAccent: document.getElementById("color-accent"),
+        bgm: document.getElementById("bgm")
+      };
+
+      const cutFields = {
+        duration: document.getElementById("cut-duration"),
+        imageUrl: document.getElementById("cut-image"),
+        textMain: document.getElementById("cut-text-main"),
+        textSub: document.getElementById("cut-text-sub"),
+        transition: document.getElementById("cut-transition"),
+        animation: document.getElementById("cut-animation")
+      };
+
+      let activeCustomer = null;
+      let activeJob = null;
+      const cutState = {
+        cuts: [],
+        activeIndex: 0
+      };
+
+      const fetchJson = async (path, options) => {
+        const response = await fetch(`${PAL_DB_ORIGIN}${path}`, options);
+        if (!response.ok) {
+          throw new Error(`pal_db error: ${response.status}`);
+        }
+        return response.json();
+      };
+
+      const deriveResolution = (purpose) => {
+        return PURPOSES[purpose] || PURPOSES.instagram_reel;
+      };
+
+      const buildPurposeCuts = (meta) => {
+        const recommendSec = Number(meta?.recommendSec || 15);
+        const cutCount = Math.max(1, Number(meta?.cutCount || 4));
+        const baseDuration = 4;
+        const lastDuration = Math.max(1, recommendSec - baseDuration * (cutCount - 1));
+        return Array.from({ length: cutCount }).map((_, index) => normalizeCut({
+          durationSec: index === cutCount - 1 ? lastDuration : baseDuration,
+          imageUrl: "",
+          textMain: "",
+          textSub: "",
+          textTransition: "none",
+          textAnimation: "none"
+        }));
+      };
+
+      const normalizePurposeFromText = (raw) => {
+        const value = String(raw || '').toLowerCase();
+        if (/ストーリー|ストーリーズ|stories/.test(value)) return "instagram_story";
+        if (/reel|リール|ショート|short/.test(value)) return "instagram_reel";
+        if (/フィード|feed/.test(value)) return "instagram_feed";
+        if (/youtubeショート|youtube\s*short|shorts/.test(value)) return "youtube_short";
+        if (/youtube|ユーチューブ/.test(value)) return "youtube";
+        if (/tiktok|ティックトック/.test(value)) return "tiktok";
+        if (/(^|\s|\b)x(\b|\s)|twitter|ツイッター/.test(value)) return "x";
+        if (/line|voom|ライン/.test(value)) return "line_voom";
+        if (/facebook|フェイスブック/.test(value)) return "facebook";
+        if (/広告|プロモ|promotion|ad/.test(value)) return "promotion";
+        return "";
+      };
+
+      const extractUrlsFromText = (raw) => {
+        const matches = String(raw || '').match(/https?:\/\/[^\s)]+/g);
+        return Array.isArray(matches) ? matches : [];
+      };
+
+      const extractHexColorsFromText = (raw) => {
+        const matches = String(raw || '').match(/#[0-9a-fA-F]{6}/g);
+        return Array.isArray(matches) ? matches : [];
+      };
+
+      const extractDurationSecFromText = (raw) => {
+        const match = String(raw || '').match(/(\d+)\s*(秒|分)/);
+        if (!match) return null;
+        const value = Number(match[1]);
+        if (!Number.isFinite(value)) return null;
+        return match[2] === "分" ? value * 60 : value;
+      };
+
+      const splitTelop = (raw) => {
+        const text = String(raw || '').trim();
+        if (!text) return { main: "", sub: "" };
+        const parts = text.split(/[\n\/／]/).map((part) => part.trim()).filter(Boolean);
+        if (!parts.length) return { main: "", sub: "" };
+        if (parts.length === 1) return { main: parts[0], sub: "" };
+        return { main: parts[0], sub: parts.slice(1).join(" / ") };
+      };
+
+      const resolveBgmFromText = (raw) => {
+        const value = String(raw || '').toLowerCase();
+        if (/クール|cool|ミニマル|minimal/.test(value)) return "cool";
+        if (/ウォーム|ナチュラル|warm|natural/.test(value)) return "warm";
+        if (/ライト|ポップ|light|pop/.test(value)) return "light";
+        return "";
+      };
+
+      const extractHearingDetails = (payload) => {
+        const answers = Array.isArray(payload?.hearingAnswers) ? payload.hearingAnswers : [];
+        const messages = Array.isArray(payload?.hearingMessages) ? payload.hearingMessages : [];
+        const purposeAnswer = answers.find((item) => /(制作目的|用途|媒体|プラットフォーム|instagram|インスタ|youtube|tiktok|x|twitter|line|voom|facebook|広告|プロモ)/i.test(item.q))?.a || "";
+        const durationAnswer = answers.find((item) => /(尺|秒|時間|長さ|動画の長さ)/i.test(item.q))?.a || "";
+        const telopAnswer = answers.find((item) => /(テロップ|コピー|キャッチ)/i.test(item.q))?.a || "";
+        const colorAnswer = answers.find((item) => /(色|カラー|配色|トーン|雰囲気)/i.test(item.q))?.a || "";
+        const materialAnswer = answers.find((item) => /(素材|画像|写真|ロゴ|動画素材)/i.test(item.q))?.a || "";
+        const bgmAnswer = answers.find((item) => /(bgm|音楽|曲|サウンド)/i.test(item.q))?.a || "";
+
+        const purpose = normalizePurposeFromText(purposeAnswer) || normalizePurposeFromText(answers.map((item) => item.a).join(" "));
+        const durationSec = extractDurationSecFromText(durationAnswer || answers.map((item) => item.a).join(" "));
+        const telop = splitTelop(telopAnswer);
+        const colors = extractHexColorsFromText(colorAnswer);
+        const imageUrls = Array.from(new Set([
+          ...extractUrlsFromText(materialAnswer),
+          ...answers.flatMap((item) => extractUrlsFromText(item.a)),
+          ...messages.flatMap((msg) => extractUrlsFromText(msg.content))
+        ]));
+        const bgm = resolveBgmFromText(bgmAnswer || answers.map((item) => item.a).join(" "));
+
+        return {
+          purpose,
+          durationSec,
+          telopMain: telop.main,
+          telopSub: telop.sub,
+          colorPrimary: colors[0] || "",
+          colorAccent: colors[1] || "",
+          imageUrls,
+          bgm
+        };
+      };
+
+      const shouldAutoApplyPurpose = () => {
+        if (cutState.cuts.length !== 1) return false;
+        const cut = cutState.cuts[0];
+        const hasContent = Boolean(cut?.imageUrl || cut?.textMain || cut?.textSub);
+        return !hasContent;
+      };
+
+      const applyPurposeDefaults = (meta, force = false) => {
+        if (!meta) return;
+        if (!force && !shouldAutoApplyPurpose()) return;
+        setCuts(buildPurposeCuts(meta));
+      };
+
+      const refreshResolution = () => {
+        const meta = deriveResolution(fields.purpose.value);
+        resolutionLabel.textContent = meta.resolution;
+        applyPurposeDefaults(meta, false);
+      };
+
+      const renderSelectOptions = (target, options) => {
+        target.innerHTML = "";
+        options.forEach((optionItem) => {
+          const option = document.createElement("option");
+          option.value = optionItem.id;
+          option.textContent = optionItem.label;
+          target.appendChild(option);
+        });
+      };
+
+      const normalizeCut = (cut) => {
+        const durationSec = Number(cut?.durationSec);
+        const normalizedDuration = Number.isFinite(durationSec) && durationSec > 0 ? Math.round(durationSec) : 5;
+        const transition = TRANSITION_OPTIONS.some((option) => option.id === cut?.textTransition)
+          ? cut.textTransition
+          : "fade";
+        const animation = ANIMATION_OPTIONS.some((option) => option.id === cut?.textAnimation)
+          ? cut.textAnimation
+          : "slide";
+        return {
+          durationSec: normalizedDuration,
+          imageUrl: String(cut?.imageUrl || "").trim(),
+          textMain: String(cut?.textMain || "").trim(),
+          textSub: String(cut?.textSub || "").trim(),
+          textTransition: transition,
+          textAnimation: animation
+        };
+      };
+
+      const updateDurationTotal = () => {
+        const total = cutState.cuts.reduce((sum, cut) => sum + (cut.durationSec || 0), 0);
+        durationTotalLabel.textContent = `${total}秒`;
+      };
+
+      const renderCutTrack = () => {
+        cutTrack.innerHTML = "";
+        cutState.cuts.forEach((cut, index) => {
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = `cut-thumb${index === cutState.activeIndex ? " active" : ""}${cut.imageUrl ? " has-image" : ""}`;
+          if (cut.imageUrl) {
+            item.style.backgroundImage = `url(${cut.imageUrl})`;
+          }
+          item.innerHTML = `
+            <span class="cut-index">#${index + 1}</span>
+            <span class="cut-duration">${cut.durationSec}s</span>
+          `;
+          item.addEventListener("click", () => {
+            setActiveCut(index);
+          });
+          cutTrack.appendChild(item);
+        });
+        updateDurationTotal();
+      };
+
+      const applyPreviewAnimation = (element, transitionType, animationType, durationSec) => {
+        const duration = Math.max(1, Number(durationSec) || 5);
+        const fade = transitionType !== "none" ? `textFade ${duration}s ease-in-out` : "";
+        let anim = "";
+        if (animationType === "slide") {
+          anim = `textSlide ${duration}s ease-out`;
+        } else if (animationType === "float") {
+          anim = `textFloat 3s ease-in-out infinite`;
+        } else if (animationType === "pop") {
+          anim = `textPop ${Math.min(duration, 3)}s ease-out`;
+        }
+        const combined = [fade, anim].filter(Boolean).join(", ");
+        element.style.animation = "none";
+        element.offsetHeight;
+        element.style.animation = combined || "none";
+      };
+
+      const updateCutPreview = () => {
+        const cut = cutState.cuts[cutState.activeIndex];
+        if (!cut) return;
+        const meta = deriveResolution(fields.purpose.value);
+        const resolution = meta.resolution.split("x").map((item) => Number(item));
+        const aspect = resolution[1] && resolution[0] ? (resolution[1] / resolution[0]) * 100 : 177.78;
+        cutPreviewStage.style.setProperty("--aspect", `${aspect}%`);
+        if (cut.imageUrl) {
+          cutPreviewInner.style.backgroundImage = `url(${cut.imageUrl})`;
+        } else {
+          cutPreviewInner.style.backgroundImage = `linear-gradient(140deg, ${fields.colorPrimary.value}, ${fields.colorAccent.value})`;
+        }
+        cutPreviewMain.textContent = cut.textMain || "メインテロップ";
+        cutPreviewSub.textContent = cut.textSub || "サブテロップ";
+        applyPreviewAnimation(cutPreviewMain, cut.textTransition, cut.textAnimation, cut.durationSec);
+        applyPreviewAnimation(cutPreviewSub, cut.textTransition, cut.textAnimation, cut.durationSec);
+      };
+
+      const syncActiveCutFromFields = () => {
+        const cut = cutState.cuts[cutState.activeIndex];
+        if (!cut) return;
+        cut.durationSec = Number(cutFields.duration.value) || cut.durationSec || 5;
+        cut.imageUrl = String(cutFields.imageUrl.value || "").trim();
+        cut.textMain = String(cutFields.textMain.value || "").trim();
+        cut.textSub = String(cutFields.textSub.value || "").trim();
+        cut.textTransition = cutFields.transition.value;
+        cut.textAnimation = cutFields.animation.value;
+        renderCutTrack();
+        updateCutPreview();
+      };
+
+      const updateCutEditor = () => {
+        const cut = cutState.cuts[cutState.activeIndex];
+        if (!cut) return;
+        cutFields.duration.value = String(cut.durationSec || 5);
+        cutFields.imageUrl.value = cut.imageUrl || "";
+        cutFields.textMain.value = cut.textMain || "";
+        cutFields.textSub.value = cut.textSub || "";
+        cutFields.transition.value = cut.textTransition || "fade";
+        cutFields.animation.value = cut.textAnimation || "slide";
+        updateCutPreview();
+      };
+
+      const setActiveCut = (index) => {
+        if (index < 0 || index >= cutState.cuts.length) return;
+        cutState.activeIndex = index;
+        renderCutTrack();
+        updateCutEditor();
+      };
+
+      const setCuts = (cuts) => {
+        cutState.cuts = cuts.length > 0 ? cuts : [normalizeCut({})];
+        cutState.activeIndex = 0;
+        renderCutTrack();
+        updateCutEditor();
+      };
+
+      const addCut = () => {
+        cutState.cuts.push(normalizeCut({}));
+        setActiveCut(cutState.cuts.length - 1);
+      };
+
+      const removeCut = () => {
+        if (cutState.cuts.length <= 1) return;
+        cutState.cuts.splice(cutState.activeIndex, 1);
+        const nextIndex = Math.max(0, cutState.activeIndex - 1);
+        setActiveCut(nextIndex);
+      };
+
+      const buildCutsFromPayload = (payload) => {
+        const rawCuts = Array.isArray(payload?.cuts) ? payload.cuts : [];
+        if (rawCuts.length > 0) {
+          return rawCuts.map((cut) => normalizeCut(cut));
+        }
+        const fallbackDuration = Number(payload?.durationSec) || 10;
+        const fallbackImageUrl = Array.isArray(payload?.imageUrls) ? payload.imageUrls[0] : "";
+        return [normalizeCut({
+          durationSec: fallbackDuration,
+          imageUrl: fallbackImageUrl,
+          textMain: payload?.telopMain || "",
+          textSub: payload?.telopSub || ""
+        })];
+      };
+
+      const buildCutsFromHearing = (hearing, meta) => {
+        const durationSec = Number(hearing?.durationSec || meta?.recommendSec || 15);
+        const sceneCount = Math.max(1, Math.ceil(durationSec / 4));
+        const baseDuration = 4;
+        const lastDuration = Math.max(1, durationSec - baseDuration * (sceneCount - 1));
+        const images = Array.isArray(hearing?.imageUrls) ? hearing.imageUrls : [];
+        return Array.from({ length: sceneCount }).map((_, index) => normalizeCut({
+          durationSec: index === sceneCount - 1 ? lastDuration : baseDuration,
+          imageUrl: images[index] || images[0] || "",
+          textMain: index === 0 ? (hearing?.telopMain || "") : `ポイント${index + 1}`,
+          textSub: index === 0 ? (hearing?.telopSub || "") : "",
+          textTransition: "none",
+          textAnimation: "none"
+        }));
+      };
+
+      const resetForm = () => {
+        activeCustomer = null;
+        activeJob = null;
+        fields.customerName.value = "";
+        customerMeta.textContent = "paletteId: - / plan: -";
+        fields.purpose.value = "instagram_reel";
+        fields.colorPrimary.value = "#E95464";
+        fields.colorAccent.value = "#1c9a8b";
+        fields.bgm.value = "light";
+        mediaList.innerHTML = "";
+        previewLink.innerHTML = "<span class=\"notice\">まだ生成されていません。</span>";
+        const meta = deriveResolution(fields.purpose.value);
+        applyPurposeDefaults(meta, true);
+        refreshResolution();
+      };
+
+      const buildPayload = () => {
+        const meta = deriveResolution(fields.purpose.value);
+        const hearingPayload = activeJob?.payload || {};
+        const cuts = cutState.cuts.map((cut) => normalizeCut(cut));
+        const durationSec = cuts.reduce((sum, cut) => sum + (cut.durationSec || 0), 0);
+        return {
+          customerName: fields.customerName.value.trim() || activeCustomer?.name || "",
+          templateId: hearingPayload.templateId || "",
+          purpose: fields.purpose.value,
+          durationSec,
+          resolution: meta.resolution,
+          aspect: meta.aspect,
+          telopMain: cuts[0]?.textMain || "テロップ未設定",
+          telopSub: cuts[0]?.textSub || "サブテロップ未設定",
+          colorPrimary: fields.colorPrimary.value,
+          colorAccent: fields.colorAccent.value,
+          imageUrls: cuts.map((cut) => cut.imageUrl).filter(Boolean),
+          bgm: fields.bgm.value,
+          cuts,
+          hearingAnswers: hearingPayload.hearingAnswers || [],
+          hearingMessages: hearingPayload.hearingMessages || []
+        };
+      };
+
+      const populateForm = (customer, payload) => {
+        activeCustomer = customer;
+        const hearing = extractHearingDetails(payload);
+        fields.customerName.value = payload?.customerName || customer?.name || "";
+        customerMeta.textContent = `paletteId: ${customer?.paletteId || "-"} / plan: ${customer?.planCode || "-"}`;
+        fields.purpose.value = payload?.purpose || hearing.purpose || "instagram_reel";
+        fields.colorPrimary.value = payload?.colorPrimary || hearing.colorPrimary || "#E95464";
+        fields.colorAccent.value = payload?.colorAccent || hearing.colorAccent || "#1c9a8b";
+        fields.bgm.value = payload?.bgm || hearing.bgm || "light";
+
+        const meta = deriveResolution(fields.purpose.value);
+        const nextCuts = (!payload?.cuts || payload.cuts.length === 0)
+          ? buildCutsFromHearing(hearing, meta)
+          : buildCutsFromPayload(payload);
+        setCuts(nextCuts);
+        refreshResolution();
+      };
+
+      const updatePreviewLink = (job) => {
+        if (job?.previewUrl) {
+          previewLink.innerHTML = `<a class=\"button secondary\" href=\"${job.previewUrl}\" target=\"_blank\">プレビューを開く</a>`;
+        } else {
+          previewLink.innerHTML = "<span class=\"notice\">まだ生成されていません。しばらくすると反映されます。</span>";
+        }
+      };
+
+      const setGenerating = (isGenerating) => {
+        if (isGenerating) {
+          generateButton.disabled = true;
+          generateStatus.innerHTML = `<div class=\"spinner\"></div><span class=\"notice\">生成中...</span>`;
+        } else {
+          generateButton.disabled = false;
+          generateStatus.innerHTML = "";
+        }
+      };
+
+      const renderCustomers = (customers) => {
+        jobList.innerHTML = "";
+        if (customers.length === 0) {
+          jobList.innerHTML = "<p class=\"notice\">pal_dbに対象プランの契約者がいません。</p>";
+          return;
+        }
+        customers.forEach((customer) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.style.cursor = "pointer";
+          card.innerHTML = `
+            <div class="flex" style="justify-content: space-between;">
+              <div>
+                <strong>${customer.name || "名称未設定"}</strong>
+                <div class="notice">${customer.planLabel || customer.planCode}</div>
+              </div>
+              <span class="badge">${customer.planCode}</span>
+            </div>
+            <div class="notice">paletteId: ${customer.paletteId}</div>
+          `;
+          card.addEventListener("click", () => {
+            loadLatestJob(customer);
+          });
+          jobList.appendChild(card);
+        });
+      };
+
+      const buildChatMessages = (payload) => {
+        const messages = Array.isArray(payload?.hearingMessages) ? payload.hearingMessages : [];
+        if (messages.length > 0) return messages;
+        const answers = Array.isArray(payload?.hearingAnswers) ? payload.hearingAnswers : [];
+        return answers.flatMap((item) => {
+          const rows = [];
+          if (item?.q) rows.push({ role: 'assistant', content: String(item.q) });
+          if (item?.a) rows.push({ role: 'user', content: String(item.a) });
+          return rows;
+        });
+      };
+
+      const updateHearingView = (payload) => {
+        const answers = Array.isArray(payload?.hearingAnswers) ? payload.hearingAnswers : [];
+        hearingAnswers.innerHTML = "";
+        if (answers.length === 0) {
+          hearingAnswers.innerHTML = "<p class=\"notice\">ヒアリング内容がまだありません。</p>";
+        } else {
+          answers.forEach((item) => {
+            const row = document.createElement("div");
+            row.innerHTML = `<strong>Q.</strong> ${item.q || ''}<br/><strong>A.</strong> ${item.a || ''}`;
+            hearingAnswers.appendChild(row);
+          });
+        }
+
+        const chatMessages = buildChatMessages(payload);
+        hearingChat.innerHTML = "";
+        if (chatMessages.length === 0) {
+          hearingChat.innerHTML = "<p class=\"notice\">チャット履歴がありません。</p>";
+        } else {
+          chatMessages.forEach((msg) => {
+            const bubble = document.createElement("div");
+            const role = msg.role === 'user' ? 'user' : 'assistant';
+            bubble.className = `chat-bubble ${role}`;
+            bubble.textContent = msg.content || '';
+            hearingChat.appendChild(bubble);
+          });
+        }
+      };
+
+      const setCutImageUrl = (url) => {
+        if (!url) return;
+        const cut = cutState.cuts[cutState.activeIndex];
+        if (!cut) return;
+        cut.imageUrl = url;
+        cutFields.imageUrl.value = url;
+        renderCutTrack();
+        updateCutPreview();
+      };
+
+      const loadMediaAssets = async (paletteId) => {
+        if (!paletteId) return;
+        mediaList.innerHTML = "<span class=\"notice\">読み込み中...</span>";
+        try {
+          const response = await fetchJson(`/api/media?paletteId=${paletteId}`);
+          const assets = Array.isArray(response.assets) ? response.assets : [];
+          if (assets.length === 0) {
+            mediaList.innerHTML = "<span class=\"notice\">メディアがありません。</span>";
+            return;
+          }
+          mediaList.innerHTML = "";
+          assets.forEach((asset) => {
+            const row = document.createElement("div");
+            row.className = "card";
+            row.style.display = "flex";
+            row.style.flexDirection = "column";
+            row.style.gap = "8px";
+            row.innerHTML = `
+              <img src="${asset.url}" alt="${asset.originalName || 'media'}" style="width: 100%; border-radius: 12px; object-fit: cover; max-height: 160px;" />
+              <div class=\"notice\">${asset.originalName || asset.fileName}</div>
+              <button class=\"button secondary\" type=\"button\">この画像を追加</button>
+            `;
+            row.querySelector("button").addEventListener("click", () => {
+              setCutImageUrl(asset.url);
+            });
+            mediaList.appendChild(row);
+          });
+        } catch (error) {
+          console.error(error);
+          mediaList.innerHTML = "<span class=\"notice\">メディア取得に失敗しました。</span>";
+        }
+      };
+
+      const uploadMediaFiles = async () => {
+        if (!activeCustomer?.paletteId) {
+          alert("顧客を選択してください。");
+          return;
+        }
+        const files = mediaUploadInput.files;
+        if (!files || files.length === 0) return;
+        uploadMediaButton.disabled = true;
+        uploadMediaButton.textContent = "アップロード中...";
+        try {
+          for (const file of files) {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("paletteId", activeCustomer.paletteId);
+            const response = await fetch(`${PAL_DB_ORIGIN}/api/media/upload`, {
+              method: "POST",
+              body: formData,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+              throw new Error(data?.error || "アップロードに失敗しました。");
+            }
+          }
+          mediaUploadInput.value = "";
+          await loadMediaAssets(activeCustomer.paletteId);
+        } catch (error) {
+          console.error(error);
+          alert(`アップロードに失敗しました。\n${error?.message || ""}`);
+        } finally {
+          uploadMediaButton.disabled = false;
+          uploadMediaButton.textContent = "アップロード";
+        }
+      };
+
+      const loadCustomersFromPalDb = async () => {
+        try {
+          const activeOn = new Date().toISOString().slice(0, 10);
+          const [plansRes, contractsRes, accountsRes] = await Promise.all([
+            fetchJson("/api/plans?includeInactive=1"),
+            fetchJson(`/api/contracts?activeOn=${activeOn}`),
+            fetchJson("/api/accounts"),
+          ]);
+
+          const plans = Array.isArray(plansRes.plans) ? plansRes.plans : [];
+          const contracts = Array.isArray(contractsRes.contracts) ? contractsRes.contracts : [];
+          const accounts = Array.isArray(accountsRes.accounts) ? accountsRes.accounts : [];
+
+          const planMap = new Map(plans.map((plan) => [plan.id, plan]));
+          const accountMap = new Map(accounts.map((account) => [account.id, account]));
+
+          const entries = contracts
+            .map((contract) => {
+              const plan = planMap.get(contract.planId);
+              const account = accountMap.get(contract.accountId);
+              if (!plan || !account) return null;
+              if (!PLAN_CODES.includes(String(plan.code))) return null;
+              return {
+                paletteId: account.paletteId,
+                name: account.name,
+                planCode: plan.code,
+                planLabel: plan.name,
+                startDate: contract.startDate,
+                updatedAt: contract.updatedAt || contract.startDate,
+              };
+            })
+            .filter(Boolean);
+
+          const byPalette = new Map();
+          entries.forEach((entry) => {
+            const prev = byPalette.get(entry.paletteId);
+            if (!prev || new Date(entry.updatedAt) > new Date(prev.updatedAt)) {
+              byPalette.set(entry.paletteId, entry);
+            }
+          });
+
+          const normalized = Array.from(byPalette.values()).sort((a, b) => {
+            return String(a.paletteId).localeCompare(String(b.paletteId));
+          });
+
+          renderCustomers(normalized);
+        } catch (error) {
+          console.error(error);
+          jobList.innerHTML = "<p class=\"notice\">pal_dbに接続できません。</p>";
+        }
+      };
+
+      const loadLatestJob = async (customer) => {
+        try {
+          const response = await fetchJson(`/api/pal-video/jobs?paletteId=${customer.paletteId}&limit=1`);
+          const jobs = Array.isArray(response.jobs) ? response.jobs : [];
+          const latest = jobs[0] || null;
+          activeJob = latest;
+          populateForm(customer, latest?.payload || null);
+          updateHearingView(latest?.payload || null);
+          updatePreviewLink(latest || null);
+          await loadMediaAssets(customer.paletteId);
+        } catch (error) {
+          console.error(error);
+          activeJob = null;
+          populateForm(customer, null);
+          updateHearingView(null);
+          updatePreviewLink(null);
+        }
+      };
+
+      const saveJob = async (overrides = {}) => {
+        if (!activeCustomer?.paletteId) return null;
+        const payload = buildPayload();
+        const body = {
+          id: activeJob?.id,
+          paletteId: activeCustomer.paletteId,
+          planCode: activeCustomer.planCode,
+          status: overrides.status || activeJob?.status || "編集中",
+          payload,
+          previewUrl: overrides.previewUrl || activeJob?.previewUrl || null,
+          youtubeUrl: overrides.youtubeUrl || activeJob?.youtubeUrl || null,
+        };
+        const response = await fetchJson("/api/pal-video/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        activeJob = response.job || null;
+        updateHearingView(activeJob?.payload || null);
+        updatePreviewLink(activeJob || null);
+        return activeJob;
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await saveJob();
+      });
+
+      generateButton.addEventListener("click", async () => {
+        const saved = await saveJob({ status: "確認中" });
+        if (!saved?.id) return;
+        setGenerating(true);
+        try {
+          const response = await fetch(`${PAL_DB_ORIGIN}/api/pal-video/render`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jobId: saved.id }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(data?.error || "動画生成に失敗しました。");
+          }
+          activeJob = data.job || activeJob;
+          updatePreviewLink(activeJob || null);
+          if (activeJob?.previewUrl) {
+            window.open(activeJob.previewUrl, "_blank");
+          }
+        } catch (error) {
+          console.error(error);
+          alert(`動画生成に失敗しました。\n${error?.message || ''}`);
+        } finally {
+          setGenerating(false);
+        }
+      });
+
+      approveButton.addEventListener("click", async () => {
+        const saved = await saveJob({ status: "承認済" });
+        if (!saved?.id) return;
+        const youtubeUrl = `https://youtu.be/mock-${saved.id}`;
+        await saveJob({ status: "承認済", youtubeUrl });
+        alert("顧客OK: YouTube自動アップはAPI接続後に有効になります。");
+      });
+
+      if (resetButton) {
+        resetButton.addEventListener("click", resetForm);
+      }
+      fields.purpose.addEventListener("change", refreshResolution);
+      [
+        cutFields.duration,
+        cutFields.imageUrl,
+        cutFields.textMain,
+        cutFields.textSub,
+        cutFields.transition,
+        cutFields.animation
+      ].forEach((field) => {
+        field.addEventListener("input", syncActiveCutFromFields);
+        field.addEventListener("change", syncActiveCutFromFields);
+      });
+      cutPrev.addEventListener("click", () => {
+        setActiveCut(Math.max(0, cutState.activeIndex - 1));
+      });
+      cutNext.addEventListener("click", () => {
+        setActiveCut(Math.min(cutState.cuts.length - 1, cutState.activeIndex + 1));
+      });
+      addCutButton.addEventListener("click", addCut);
+      removeCutButton.addEventListener("click", removeCut);
+      saveCutButton.addEventListener("click", async () => {
+        if (!activeCustomer?.paletteId) {
+          alert("顧客を選択してください。");
+          return;
+        }
+        await saveJob();
+        alert("カット内容を保存しました。");
+      });
+      refreshMediaButton.addEventListener("click", async () => {
+        if (activeCustomer?.paletteId) {
+          await loadMediaAssets(activeCustomer.paletteId);
+        }
+      });
+      uploadMediaButton.addEventListener("click", uploadMediaFiles);
+      openHearingChat.addEventListener("click", () => {
+        updateHearingView(activeJob?.payload || null);
+        hearingModal.classList.add("active");
+      });
+      closeHearingChat.addEventListener("click", () => {
+        hearingModal.classList.remove("active");
+      });
+      hearingModal.addEventListener("click", (event) => {
+        if (event.target === hearingModal) hearingModal.classList.remove("active");
+      });
+      renderSelectOptions(cutFields.transition, TRANSITION_OPTIONS);
+      renderSelectOptions(cutFields.animation, ANIMATION_OPTIONS);
+      resetForm();
+      refreshResolution();
+      loadCustomersFromPalDb();
+    </script>
+  </body>
+</html>
