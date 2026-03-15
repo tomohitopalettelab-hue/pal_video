@@ -12,7 +12,10 @@ export type PalVideoCut = {
 
 export type PalVideoPayload = {
   title?: string;
+  /** コンテンツ用途: promotion / sns_post / sns_ad / review / achievement */
   purpose?: string;
+  /** 投稿先プラットフォーム: instagram_reel / tiktok / youtube / etc. */
+  destination?: string;
   resolution?: string;
   duration?: number;
   colorPrimary?: string;
@@ -20,6 +23,10 @@ export type PalVideoPayload = {
   bgm?: string;
   cuts?: PalVideoCut[];
   hearingData?: Record<string, unknown>;
+  /** ヒアリングQAペア [{q, a}] */
+  hearingAnswers?: Array<{ q: string; a: string }>;
+  /** ヒアリングチャット履歴 [{role, content}] */
+  hearingMessages?: Array<{ role: string; content: string }>;
   youtubeCredentials?: {
     accessToken?: string;
     refreshToken?: string;

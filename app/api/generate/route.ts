@@ -7,6 +7,7 @@ type GenerateBody = {
   paletteId: string;
   jobId?: string;
   purpose: string;
+  destination?: string;
   hearingData?: Record<string, unknown>;
   existingCuts?: PalVideoCut[];
 };
@@ -44,7 +45,7 @@ Do not include any explanation or text outside the JSON.`;
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as GenerateBody;
-    const { paletteId, purpose, jobId } = body;
+    const { paletteId, purpose, destination, jobId } = body;
 
     if (!paletteId || !purpose) {
       return NextResponse.json({ success: false, error: 'paletteId と purpose は必須です。' }, { status: 400 });
@@ -72,15 +73,30 @@ export async function POST(req: Request) {
     const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
     const purposeLabels: Record<string, string> = {
-      instagram_reel: 'Instagramリール（縦型・15-30秒）',
-      youtube_short: 'YouTubeショート（縦型・60秒以内）',
-      tiktok: 'TikTok（縦型・15-60秒）',
-      web_banner: 'Webバナー動画（横型）',
+      promotion: 'プロモーション動画（商品・サービスの宣伝）',
+      sns_post: 'SNS投稿用（オーガニック投稿）',
+      sns_ad: 'SNS広告（有料広告配信用）',
+      review: '口コミ紹介（レビュー・お客様の声）',
+      achievement: '実績紹介（事例・実績アピール）',
+    };
+    const destinationLabels: Record<string, string> = {
+      instagram_reel: 'Instagram リール（縦型9:16）',
+      instagram_story: 'Instagram ストーリーズ（縦型9:16）',
+      instagram_feed: 'Instagram フィード（正方形1:1）',
+      tiktok: 'TikTok（縦型9:16）',
+      youtube_short: 'YouTube ショート（縦型9:16）',
+      youtube: 'YouTube（横型16:9）',
+      x_twitter: 'X (Twitter)（縦型4:5）',
+      line_voom: 'LINE VOOM（縦型4:5）',
+      facebook: 'Facebook（縦型4:5）',
+      web_banner: 'Webバナー動画（横型16:9）',
     };
     const purposeLabel = purposeLabels[purpose] || purpose;
+    const destinationLabel = destination ? (destinationLabels[destination] || destination) : null;
 
     const userPrompt = [
-      `目的: ${purposeLabel}`,
+      `用途: ${purposeLabel}`,
+      destinationLabel ? `投稿先: ${destinationLabel}` : '',
       jobId ? `ジョブID: ${jobId}` : '',
       `顧客ID: ${paletteId}`,
       hearingData && Object.keys(hearingData).length > 0
