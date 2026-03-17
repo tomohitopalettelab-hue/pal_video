@@ -450,19 +450,24 @@ export default function AdminPage() {
         }),
       });
       const resBody = await res.json().catch(() => ({}));
-      if (resBody?.job) {
-        const updated = resBody.job as PalVideoJob;
-        setJobs((prev) => {
-          const idx = prev.findIndex((j) => j.id === updated.id);
-          if (idx >= 0) { const n = [...prev]; n[idx] = updated; return n; }
-          return [updated, ...prev];
-        });
-        setSelectedJobId(updated.id);
-        setPreviewUrl(updated.previewUrl || null);
-        setOpMessage('保存しました。');
-        setTimeout(() => setOpMessage(''), 3000);
+      if (!res.ok || !resBody?.job) {
+        throw new Error(resBody?.error || '保存に失敗しました。');
       }
-    } catch { setOpMessage('保存に失敗しました。'); }
+      const updated = resBody.job as PalVideoJob;
+      setJobs((prev) => {
+        const idx = prev.findIndex((j) => j.id === updated.id);
+        if (idx >= 0) { const n = [...prev]; n[idx] = updated; return n; }
+        return [updated, ...prev];
+      });
+      setSelectedJobId(updated.id);
+      setPreviewUrl(updated.previewUrl || null);
+      setOpMessage('保存しました。');
+      setTimeout(() => setOpMessage(''), 3000);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '保存に失敗しました。';
+      setOpMessage(`⚠️ ${msg}`);
+      throw e; // re-throw so handleRender knows the save failed
+    }
     finally  { setIsSaving(false); }
   };
 
@@ -518,8 +523,11 @@ export default function AdminPage() {
       } else {
         setOpMessage(body?.error || 'レンダリングに失敗しました。');
       }
-    } catch { setOpMessage('レンダリングに失敗しました。'); }
-    finally  { setIsRendering(false); }
+    } catch (e: unknown) {
+      if (!(e instanceof Error && e.message.includes('保存'))) {
+        setOpMessage('レンダリングに失敗しました。');
+      }
+    } finally  { setIsRendering(false); }
   };
 
   // ── Logout ────────────────────────────────────────────────────────────────
