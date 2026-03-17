@@ -64,24 +64,32 @@ const TRANSITION_OPTIONS = [
   { value: 'zoom',       label: 'ズーム' },
   { value: 'wipe',       label: 'ワイプ' },
   { value: 'color-wipe', label: 'カラーワイプ' },
-  { value: 'flip',       label: 'フリップ' },
+  { value: 'flip',       label: 'フリップ（スピン）' },
+  { value: 'blur',       label: 'ブラー' },
+  { value: 'bounce',     label: 'バウンス' },
+  { value: 'push',       label: 'プッシュ' },
   { value: 'none',       label: 'なし' },
 ];
 
 const ANIMATION_OPTIONS = [
-  { value: 'slide', label: 'スライド' },
-  { value: 'zoom',  label: 'ズーム' },
-  { value: 'fade',  label: 'フェード' },
-  { value: 'pop',   label: 'ポップ' },
-  { value: 'blur',  label: 'ブラー' },
-  { value: 'wipe',  label: 'ワイプ' },
-  { value: 'none',  label: 'なし' },
+  { value: 'slide',   label: 'スライド' },
+  { value: 'rise',    label: 'ライズ（大きくスライドアップ）' },
+  { value: 'zoom',    label: 'ズーム' },
+  { value: 'pop',     label: 'ポップ' },
+  { value: 'elastic', label: 'エラスティック（強めポップ）' },
+  { value: 'fade',    label: 'フェード' },
+  { value: 'blur',    label: 'ブラー' },
+  { value: 'wipe',    label: 'ワイプ' },
+  { value: 'drop',    label: 'ドロップ' },
+  { value: 'none',    label: 'なし' },
 ];
 
 const LAYOUT_OPTIONS = [
-  { value: 'bottom', label: 'ボトム（下）' },
-  { value: 'top',    label: 'トップ（上）' },
-  { value: 'center', label: 'センター（中央）' },
+  { value: 'bottom',    label: 'ボトム（下テロップ）' },
+  { value: 'top',       label: 'トップ（上テロップ）' },
+  { value: 'center',    label: 'センター（全画面）' },
+  { value: 'caption',   label: 'キャプション（ソリッドバンド）' },
+  { value: 'billboard', label: 'ビルボード（大見出し）' },
 ];
 
 const DEFAULT_PAYLOAD: PalVideoPayload = {

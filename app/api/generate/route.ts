@@ -12,19 +12,65 @@ type GenerateBody = {
   existingCuts?: PalVideoCut[];
 };
 
-const SYSTEM_PROMPT = `You are a professional video editor AI specialized in short-form social media video production.
-Your task is to generate a sequence of video cuts (scenes) for a short marketing video.
+// ── Pexels image search ──────────────────────────────────────────────────────
+const PEXELS_API_KEY = process.env.PEXELS_API_KEY || '';
+
+async function searchPexelsImage(
+  keyword: string,
+  orientation: 'portrait' | 'landscape' | 'square' = 'portrait',
+): Promise<string | null> {
+  if (!PEXELS_API_KEY) return null;
+  try {
+    const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(keyword)}&per_page=5&orientation=${orientation}`;
+    const res = await fetch(url, {
+      headers: { Authorization: PEXELS_API_KEY },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      photos?: Array<{ src: { large2x?: string; large?: string; original?: string } }>;
+    };
+    const photos = data?.photos || [];
+    if (photos.length === 0) return null;
+    const pick = photos[Math.floor(Math.random() * Math.min(photos.length, 5))];
+    return pick?.src?.large2x || pick?.src?.large || pick?.src?.original || null;
+  } catch {
+    return null;
+  }
+}
+
+// ── AI system prompt ─────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are a professional video editor AI specialized in short-form social media video production for Japanese businesses.
+Your task is to generate a sequence of video cuts (scenes) for a high-quality marketing video.
 
 Rules:
 - Generate 5-8 cuts for the video.
 - Each cut must have a unique id (use short alphanumeric strings like "c1", "c2", etc.).
 - Duration should be 2-5 seconds per cut.
-- mainText should be catchy Japanese marketing copy (keep it short, impactful).
-- subText should be a supporting phrase or detail (shorter than mainText).
-- transition options: "fade", "slide", "zoom", "none"
-- animation options: "slide", "zoom", "fade", "none"
-- Vary transitions and animations for visual interest.
-- Use the hearing data and purpose to tailor the copy to the business context.
+- mainText: catchy Japanese marketing copy — max 14 chars, impactful, poetic if possible.
+- subText: supporting detail — max 22 chars, shorter than mainText.
+- transition options: "fade", "slide", "zoom", "wipe", "color-wipe", "flip", "blur", "bounce", "none"
+- animation options: "slide", "zoom", "fade", "pop", "blur", "wipe", "rise", "drop", "elastic", "none"
+- layout options:
+    "bottom"    → lower-third overlay (classic Instagram/TikTok)
+    "top"       → upper-third overlay (fresh, contrasting)
+    "center"    → full-screen centered statement (use for most impactful lines)
+    "caption"   → solid dark band at bottom (modern, clean caption style)
+    "billboard" → giant headline at top of screen (magazine cover feel)
+- imageKeyword: 3-5 English words describing the ideal stock photo for this cut.
+  Must be concrete and visual (e.g. "japanese ramen restaurant interior", "woman smiling coffee shop", "cherry blossom street japan").
+  Tailor to the specific business from hearingData.
+
+Layout strategy:
+- Cut 0: "bottom" or "caption" (welcoming opener)
+- Cut 1: "billboard" (bold visual statement)
+- Cut 2: "caption" or "top" (feature highlight)
+- Cut 3: "center" (emotional peak / key message)
+- Cut 4+: mix of "bottom", "caption", "top"
+- Last cut: "bottom" or "caption" with strong CTA copy like "今すぐチェック" or "詳しくはプロフィールへ"
+
+Transition strategy: vary heavily. Use "color-wipe" and "bounce" for energy. Use "blur" for smooth sophistication.
+Animation strategy: use "pop" and "elastic" for impact moments. Use "rise" and "slide" for elegant flow.
 
 You MUST respond ONLY with valid JSON in this exact format:
 {
@@ -34,8 +80,10 @@ You MUST respond ONLY with valid JSON in this exact format:
       "duration": 3,
       "mainText": "春の新作、解禁。",
       "subText": "3日間限定オファー",
-      "transition": "fade",
-      "animation": "slide"
+      "transition": "color-wipe",
+      "animation": "pop",
+      "layout": "bottom",
+      "imageKeyword": "japanese spring cherry blossom cafe food"
     }
   ]
 }
@@ -117,22 +165,41 @@ export async function POST(req: Request) {
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.8,
-      max_tokens: 1500,
+      max_tokens: 2000,
       response_format: { type: 'json_object' },
     });
 
     const content = completion.choices[0]?.message?.content || '{}';
-    let parsed: { cuts?: PalVideoCut[] };
+    let parsed: { cuts?: Array<PalVideoCut & { imageKeyword?: string }> };
     try {
       parsed = JSON.parse(content);
     } catch {
       return NextResponse.json({ success: false, error: 'AI レスポンスのパースに失敗しました。' }, { status: 500 });
     }
 
-    const cuts: PalVideoCut[] = Array.isArray(parsed.cuts) ? parsed.cuts : [];
-    if (cuts.length === 0) {
+    const rawCuts: Array<PalVideoCut & { imageKeyword?: string }> = Array.isArray(parsed.cuts) ? parsed.cuts : [];
+    if (rawCuts.length === 0) {
       return NextResponse.json({ success: false, error: 'カットの生成に失敗しました。' }, { status: 500 });
     }
+
+    // Determine image orientation from destination
+    const orientationMap: Record<string, 'portrait' | 'landscape' | 'square'> = {
+      youtube: 'landscape',
+      web_banner: 'landscape',
+      instagram_feed: 'square',
+    };
+    const orientation = orientationMap[destination || ''] || 'portrait';
+
+    // Parallel-fetch stock images via Pexels for each cut that has imageKeyword
+    const cuts: PalVideoCut[] = await Promise.all(
+      rawCuts.map(async (cut) => {
+        const { imageKeyword, ...rest } = cut;
+        if (rest.imageUrl) return rest; // already has image
+        if (!imageKeyword) return rest;
+        const imageUrl = await searchPexelsImage(imageKeyword, orientation);
+        return imageUrl ? { ...rest, imageUrl } : rest;
+      }),
+    );
 
     return NextResponse.json({ success: true, cuts });
   } catch (error: unknown) {
