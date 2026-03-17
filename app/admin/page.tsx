@@ -59,17 +59,29 @@ const BGM_OPTIONS = [
 ];
 
 const TRANSITION_OPTIONS = [
-  { value: 'fade',  label: 'フェード' },
-  { value: 'slide', label: 'スライド' },
-  { value: 'zoom',  label: 'ズーム' },
-  { value: 'none',  label: 'なし' },
+  { value: 'fade',       label: 'フェード' },
+  { value: 'slide',      label: 'スライド' },
+  { value: 'zoom',       label: 'ズーム' },
+  { value: 'wipe',       label: 'ワイプ' },
+  { value: 'color-wipe', label: 'カラーワイプ' },
+  { value: 'flip',       label: 'フリップ' },
+  { value: 'none',       label: 'なし' },
 ];
 
 const ANIMATION_OPTIONS = [
   { value: 'slide', label: 'スライド' },
   { value: 'zoom',  label: 'ズーム' },
   { value: 'fade',  label: 'フェード' },
+  { value: 'pop',   label: 'ポップ' },
+  { value: 'blur',  label: 'ブラー' },
+  { value: 'wipe',  label: 'ワイプ' },
   { value: 'none',  label: 'なし' },
+];
+
+const LAYOUT_OPTIONS = [
+  { value: 'bottom', label: 'ボトム（下）' },
+  { value: 'top',    label: 'トップ（上）' },
+  { value: 'center', label: 'センター（中央）' },
 ];
 
 const DEFAULT_PAYLOAD: PalVideoPayload = {
@@ -116,7 +128,7 @@ type Customer = {
 const newCutId = () => `c${Date.now().toString(36)}`;
 const makeNewCut = (): PalVideoCut => ({
   id: newCutId(), duration: 3, mainText: '', subText: '',
-  transition: 'fade', animation: 'slide', imageUrl: null,
+  transition: 'fade', animation: 'slide', layout: 'bottom', imageUrl: null,
 });
 
 // ── Hearing Modal ─────────────────────────────────────────────────────────────
@@ -726,12 +738,20 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-4 gap-3">
                         <div>
                           <label className="block text-[11px] font-bold text-slate-500 mb-1">尺: {selectedCut.duration}s</label>
                           <input type="range" min={1} max={10} value={selectedCut.duration}
                             onChange={(e) => updateCut(selectedCut.id, { duration: Number(e.target.value) })}
                             className="w-full accent-rose-400" />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-500 mb-1">レイアウト</label>
+                          <select value={selectedCut.layout || 'bottom'}
+                            onChange={(e) => updateCut(selectedCut.id, { layout: e.target.value })}
+                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none">
+                            {LAYOUT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
                         </div>
                         <div>
                           <label className="block text-[11px] font-bold text-slate-500 mb-1">トランジション</label>

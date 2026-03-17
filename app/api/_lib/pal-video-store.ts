@@ -8,6 +8,8 @@ export type PalVideoCut = {
   subText?: string;
   transition?: string;
   animation?: string;
+  /** レイアウト: bottom (下寄せ) | top (上寄せ) | center (中央) */
+  layout?: string;
 };
 
 export type PalVideoPayload = {
