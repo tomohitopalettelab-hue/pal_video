@@ -497,12 +497,14 @@ export default function AdminPage() {
       const res  = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          paletteId:    selectedCustomer.paletteId,
-          jobId:        selectedJobId,
-          purpose:      editingPayload.purpose      || 'promotion',
-          destination:  editingPayload.destination  || 'instagram_reel',
-          hearingData:  editingPayload.hearingData,
-          existingCuts: editingPayload.cuts,
+          paletteId:       selectedCustomer.paletteId,
+          jobId:           selectedJobId,
+          purpose:         editingPayload.purpose      || 'promotion',
+          destination:     editingPayload.destination  || 'instagram_reel',
+          hearingData:     editingPayload.hearingData,
+          hearingAnswers:  editingPayload.hearingAnswers,
+          hearingMessages: editingPayload.hearingMessages,
+          existingCuts:    editingPayload.cuts,
         }),
       });
       const body = await res.json().catch(() => ({}));

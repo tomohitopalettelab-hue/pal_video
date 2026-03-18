@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { palDbGet } from '../_lib/pal-db-client';
 import type { PalVideoCut } from '../_lib/pal-video-store';
 
 type GenerateBody = {
@@ -9,6 +8,8 @@ type GenerateBody = {
   purpose: string;
   destination?: string;
   hearingData?: Record<string, unknown>;
+  hearingAnswers?: Array<{ q: string; a: string }>;
+  hearingMessages?: Array<{ role: string; content: string }>;
   existingCuts?: PalVideoCut[];
 };
 
@@ -112,18 +113,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'paletteId と purpose は必須です。' }, { status: 400 });
     }
 
-    // Fetch hearing data if not provided
-    let hearingData = body.hearingData || {};
-    if (!body.hearingData && paletteId) {
-      try {
-        const hearingRes = await palDbGet(`/api/hearing?paletteId=${encodeURIComponent(paletteId)}`);
-        if (hearingRes.ok) {
-          hearingData = await hearingRes.json().catch(() => ({}));
-        }
-      } catch {
-        // Ignore hearing fetch error, use empty object
-      }
-    }
+    // Hearing data: merge all available sources
+    const hearingData = body.hearingData || {};
+    const hearingAnswers  = body.hearingAnswers  || [];
+    const hearingMessages = body.hearingMessages || [];
 
     const apiKey = process.env.OPENAI_KEY_API || process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -155,21 +148,41 @@ export async function POST(req: Request) {
     const purposeLabel = purposeLabels[purpose] || purpose;
     const destinationLabel = destination ? (destinationLabels[destination] || destination) : null;
 
+    // Build hearing context string (most informative format available)
+    const hearingContext = (() => {
+      const parts: string[] = [];
+      if (hearingAnswers.length > 0) {
+        parts.push('ヒアリングQ&A:\n' + hearingAnswers
+          .filter((qa) => qa.a && qa.a !== '••••••')
+          .map((qa) => `Q: ${qa.q}\nA: ${qa.a}`)
+          .join('\n'));
+      }
+      if (hearingMessages.length > 0) {
+        const chatText = hearingMessages
+          .filter((m) => m.role !== 'system' && m.content)
+          .slice(-20)  // last 20 messages
+          .map((m) => `${m.role === 'user' ? '顧客' : 'AI'}: ${m.content}`)
+          .join('\n');
+        if (chatText) parts.push(`ヒアリングチャット:\n${chatText}`);
+      }
+      if (Object.keys(hearingData).length > 0 && parts.length === 0) {
+        parts.push(`ヒアリングデータ: ${JSON.stringify(hearingData, null, 2)}`);
+      }
+      return parts.length > 0 ? parts.join('\n\n') : 'ヒアリングデータ: なし';
+    })();
+
     const userPrompt = [
       `用途: ${purposeLabel}`,
       destinationLabel ? `投稿先: ${destinationLabel}` : '',
-      jobId ? `ジョブID: ${jobId}` : '',
       `顧客ID: ${paletteId}`,
-      hearingData && Object.keys(hearingData).length > 0
-        ? `ヒアリングデータ: ${JSON.stringify(hearingData, null, 2)}`
-        : 'ヒアリングデータ: なし',
+      hearingContext,
       body.existingCuts && body.existingCuts.length > 0
         ? `既存カット数: ${body.existingCuts.length}`
         : '',
-      '上記の情報に基づいて動画カットを生成してください。',
+      '上記のヒアリング内容を深く読み込み、そのビジネス・ブランドに最適な動画カットを生成してください。',
     ]
       .filter(Boolean)
-      .join('\n');
+      .join('\n\n');
 
     const completion = await openai.chat.completions.create({
       model,
