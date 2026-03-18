@@ -3,9 +3,11 @@
   "configurations": [
     {
       "name": "pal_video",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["node_modules/.bin/next", "dev", "--port", "3103"],
-      "port": 3103
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\npm.cmd",
+      "runtimeArgs": ["run", "dev", "--", "--port", "3103"],
+      "cwd": "C:\\dev\\palette_system\\pal_video",
+      "port": 3103,
+      "autoPort": false
     }
   ]
 }
