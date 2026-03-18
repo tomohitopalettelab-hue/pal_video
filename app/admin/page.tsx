@@ -92,6 +92,11 @@ const LAYOUT_OPTIONS = [
   { value: 'billboard', label: 'ビルボード（大見出し）' },
 ];
 
+const STYLE_OPTIONS = [
+  { value: 'standard', label: 'スタンダード（ダーク/KenBurns）' },
+  { value: 'collage',  label: 'コラージュ（白背景/ポラロイドグリッド）' },
+];
+
 const DEFAULT_PAYLOAD: PalVideoPayload = {
   title:        '新しい動画',
   purpose:      'promotion',
@@ -100,6 +105,7 @@ const DEFAULT_PAYLOAD: PalVideoPayload = {
   colorPrimary: '#E95464',
   colorAccent:  '#1c9a8b',
   bgm:          'bright_pop',
+  style:        'standard',
   cuts:         [],
 };
 
@@ -316,6 +322,7 @@ export default function AdminPage() {
 
   // State: UI
   const [showMediaModal, setShowMedia]        = useState(false);
+  const [mediaSlot, setMediaSlot]             = useState<number>(0); // 0=single/slot0, 1-3=collage slots
   const [showHearingModal, setShowHearing]    = useState(false);
   const [showHearingInline, setShowInline]    = useState(false);
   const [opMessage, setOpMessage]             = useState('');
@@ -744,14 +751,27 @@ export default function AdminPage() {
                             onBlur={(e) => (e.target.style.boxShadow = '')} />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1">サブテキスト</label>
+                          <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                            {editingPayload.style === 'collage' ? 'ラベル（小テキスト）' : 'サブテキスト'}
+                          </label>
                           <input value={selectedCut.subText || ''}
                             onChange={(e) => updateCut(selectedCut.id, { subText: e.target.value })}
-                            placeholder="3日間限定オファー"
+                            placeholder={editingPayload.style === 'collage' ? 'スタッフ募集のお知らせ' : '3日間限定オファー'}
                             className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none"
                             onFocus={(e) => (e.target.style.boxShadow = `0 0 0 2px ${ACCENT}40`)}
                             onBlur={(e) => (e.target.style.boxShadow = '')} />
                         </div>
+                        {editingPayload.style === 'collage' && (
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-500 mb-1">キャプション（下部）</label>
+                            <input value={selectedCut.caption || ''}
+                              onChange={(e) => updateCut(selectedCut.id, { caption: e.target.value })}
+                              placeholder="詳細・ご応募はこちら"
+                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none"
+                              onFocus={(e) => (e.target.style.boxShadow = `0 0 0 2px ${ACCENT}40`)}
+                              onBlur={(e) => (e.target.style.boxShadow = '')} />
+                          </div>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-4 gap-3">
@@ -787,25 +807,66 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">画像</label>
-                        <div className="flex items-center gap-2">
-                          {selectedCut.imageUrl && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={selectedCut.imageUrl} alt="cut" className="w-12 h-12 object-cover rounded-lg border border-slate-200" />
-                          )}
-                          <button onClick={() => setShowMedia(true)}
-                            className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                            画像を選択
-                          </button>
-                          {selectedCut.imageUrl && (
-                            <button onClick={() => updateCut(selectedCut.id, { imageUrl: null })}
-                              className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-red-500 hover:bg-red-50">
-                              削除
-                            </button>
-                          )}
+                      {editingPayload.style === 'collage' ? (
+                        /* ── Collage: 2×2 グリッド画像選択 ──────────────── */
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-500 mb-1.5">
+                            グリッド画像（最大4枚）
+                          </label>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {[0, 1, 2, 3].map((slot) => {
+                              const imgs = selectedCut.images || [];
+                              const url  = imgs[slot] || null;
+                              return (
+                                <div key={slot} className="relative group">
+                                  <button
+                                    onClick={() => { setMediaSlot(slot); setShowMedia(true); }}
+                                    className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 hover:border-slate-400 overflow-hidden bg-slate-50 flex items-center justify-center transition-colors">
+                                    {url ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <span className="text-slate-400 text-[10px]">#{slot + 1}</span>
+                                    )}
+                                  </button>
+                                  {url && (
+                                    <button
+                                      onClick={() => {
+                                        const newImgs = [...(selectedCut.images || [])];
+                                        newImgs[slot] = '';
+                                        updateCut(selectedCut.id, { images: newImgs });
+                                      }}
+                                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] items-center justify-center hidden group-hover:flex">
+                                      ×
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        /* ── Standard: 単一画像選択 ──────────────────────── */
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-500 mb-1">画像</label>
+                          <div className="flex items-center gap-2">
+                            {selectedCut.imageUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={selectedCut.imageUrl} alt="cut" className="w-12 h-12 object-cover rounded-lg border border-slate-200" />
+                            )}
+                            <button onClick={() => { setMediaSlot(0); setShowMedia(true); }}
+                              className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                              画像を選択
+                            </button>
+                            {selectedCut.imageUrl && (
+                              <button onClick={() => updateCut(selectedCut.id, { imageUrl: null })}
+                                className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-red-500 hover:bg-red-50">
+                                削除
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -907,20 +968,55 @@ export default function AdminPage() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">メインカラー</label>
-                <input type="color" value={editingPayload.colorPrimary || '#E95464'}
-                  onChange={(e) => setPayload((p) => ({ ...p, colorPrimary: e.target.value }))}
-                  className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">アクセントカラー</label>
-                <input type="color" value={editingPayload.colorAccent || '#1c9a8b'}
-                  onChange={(e) => setPayload((p) => ({ ...p, colorAccent: e.target.value }))}
-                  className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
-              </div>
+            {/* ── テンプレートスタイル ─────────────────────────────────── */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">テンプレートスタイル</label>
+              <select value={editingPayload.style || 'standard'}
+                onChange={(e) => setPayload((p) => ({ ...p, style: e.target.value as 'standard' | 'collage' }))}
+                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none bg-white">
+                {STYLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             </div>
+
+            {editingPayload.style === 'collage' ? (
+              /* ── Collage カラー設定 ──────────────────────────────────── */
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">背景色</label>
+                  <input type="color" value={editingPayload.bgColor || '#FAF8F5'}
+                    onChange={(e) => setPayload((p) => ({ ...p, bgColor: e.target.value }))}
+                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">テキスト色</label>
+                  <input type="color" value={editingPayload.textColor || '#1C1C1C'}
+                    onChange={(e) => setPayload((p) => ({ ...p, textColor: e.target.value }))}
+                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">アクセント</label>
+                  <input type="color" value={editingPayload.colorAccent || '#9C7B5C'}
+                    onChange={(e) => setPayload((p) => ({ ...p, colorAccent: e.target.value }))}
+                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
+                </div>
+              </div>
+            ) : (
+              /* ── Standard カラー設定 ─────────────────────────────────── */
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">メインカラー</label>
+                  <input type="color" value={editingPayload.colorPrimary || '#E95464'}
+                    onChange={(e) => setPayload((p) => ({ ...p, colorPrimary: e.target.value }))}
+                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">アクセントカラー</label>
+                  <input type="color" value={editingPayload.colorAccent || '#1c9a8b'}
+                    onChange={(e) => setPayload((p) => ({ ...p, colorAccent: e.target.value }))}
+                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -995,7 +1091,16 @@ export default function AdminPage() {
       {showMediaModal && selectedCustomer && (
         <MediaModal
           paletteId={selectedCustomer.paletteId}
-          onSelect={(url) => { if (selectedCut) updateCut(selectedCut.id, { imageUrl: url }); }}
+          onSelect={(url) => {
+            if (!selectedCut) return;
+            if (editingPayload.style === 'collage') {
+              const newImgs = [...(selectedCut.images || ['', '', '', ''])];
+              newImgs[mediaSlot] = url;
+              updateCut(selectedCut.id, { images: newImgs });
+            } else {
+              updateCut(selectedCut.id, { imageUrl: url });
+            }
+          }}
           onClose={() => setShowMedia(false)}
         />
       )}

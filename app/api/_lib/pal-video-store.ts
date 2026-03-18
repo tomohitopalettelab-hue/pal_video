@@ -4,8 +4,12 @@ export type PalVideoCut = {
   id: string;
   duration: number;
   imageUrl?: string | null;
+  /** collageスタイル用: 複数画像URL (最大4枚) */
+  images?: string[];
   mainText?: string;
   subText?: string;
+  /** collageスタイル用: カード下キャプション */
+  caption?: string;
   transition?: string;
   animation?: string;
   /** レイアウト: bottom (下寄せ) | top (上寄せ) | center (中央) */
@@ -23,6 +27,12 @@ export type PalVideoPayload = {
   colorPrimary?: string;
   colorAccent?: string;
   bgm?: string;
+  /** テンプレートスタイル: 'standard' (ダーク/KenBurns) | 'collage' (白背景/ポラロイドグリッド) */
+  style?: 'standard' | 'collage';
+  /** collageスタイル用: 背景色 (default: #FAF8F5) */
+  bgColor?: string;
+  /** collageスタイル用: テキスト色 (default: #1C1C1C) */
+  textColor?: string;
   cuts?: PalVideoCut[];
   hearingData?: Record<string, unknown>;
   /** ヒアリングQAペア [{q, a}] */
