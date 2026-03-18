@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       payload: job.payload,
     };
 
-    const renderRes = await palDbPost(endpoint, renderPayload);
+    const renderRes = await palDbPost(endpoint, renderPayload, { timeoutMs: 90000 });
     const renderBody = await renderRes.json().catch(() => ({}));
 
     if (!renderRes.ok) {
