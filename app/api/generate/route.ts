@@ -49,8 +49,8 @@ Rules:
 - Duration should be 2-5 seconds per cut.
 - mainText: catchy Japanese marketing copy — max 14 chars, impactful, poetic if possible.
 - subText: supporting detail — max 22 chars, shorter than mainText.
-- transition options: "fade", "slide", "zoom", "wipe", "color-wipe", "flip", "blur", "bounce", "none"
-- animation options: "slide", "zoom", "fade", "pop", "blur", "wipe", "rise", "drop", "elastic", "none"
+- transition options: "fade", "slide", "zoom", "wipe", "color-wipe", "flip", "blur", "bounce", "push", "film-roll", "circular", "stripe"
+- animation options: "slide", "zoom", "fade", "pop", "blur", "wipe", "rise", "drop", "elastic", "typewriter", "text-slide", "spin", "none"
 - layout options:
     "bottom"    → lower-third overlay (classic Instagram/TikTok)
     "top"       → upper-third overlay (fresh, contrasting)
@@ -58,8 +58,6 @@ Rules:
     "caption"   → solid dark band at bottom (modern, clean caption style)
     "billboard" → giant headline at top of screen (magazine cover feel)
 - imageKeyword: 3-5 English words describing the ideal stock photo for this cut.
-  Must be concrete and visual (e.g. "japanese ramen restaurant interior", "woman smiling coffee shop", "cherry blossom street japan").
-  Tailor to the specific business from hearingData.
 
 Layout strategy:
 - Cut 0: "bottom" or "caption" (welcoming opener)
@@ -67,25 +65,40 @@ Layout strategy:
 - Cut 2: "caption" or "top" (feature highlight)
 - Cut 3: "center" (emotional peak / key message)
 - Cut 4+: mix of "bottom", "caption", "top"
-- Last cut: "bottom" or "caption" with strong CTA copy like "今すぐチェック" or "詳しくはプロフィールへ"
+- Last cut: "bottom" or "caption" with strong CTA copy
 
-Transition strategy: vary heavily. Use "color-wipe" and "bounce" for energy. Use "blur" for smooth sophistication.
-Animation strategy: use "pop" and "elastic" for impact moments. Use "rise" and "slide" for elegant flow.
+Transition strategy: vary HEAVILY. Use "color-wipe", "bounce", "film-roll", "circular", "stripe" for energy. Use "zoom" for elegance. Never use the same transition twice in a row.
+Animation strategy: use "pop", "elastic", "text-slide", "spin" for impact. Use "rise", "typewriter" for sophistication. Vary every cut.
+
+Brand color extraction:
+- Analyze hearingData for brand colors, industry, and tone
+- Suggest colorPrimary: a strong brand color (hex) appropriate for the business type
+- Suggest colorAccent: a complementary accent color (hex)
+- Suggest textColor: "#ffffff" for dark backgrounds, "#1A1A1A" for light backgrounds
+- Suggest style: "standard" (most cases), "magazine" (luxury/corporate), "minimal" (clean/elegant), "collage" (multi-photo showcase)
+- Suggest bgm from: "bright_pop", "cool_minimal", "cinematic", "natural_warm"
+
+Industry color guide:
+- Restaurant/Food: warm tones (#E8532A, #C4973A), accent: #2D9E8A
+- Beauty/Fashion: rose/coral (#E94577), accent: #8B5E83 or gold
+- Medical/Healthcare: blue/teal (#1B6CA8), accent: #3ABFA3
+- Real estate: navy/charcoal (#1A2744), accent: #C4973A
+- IT/Tech: deep blue (#1B3A6B) or dark (#0D1B2A), accent: #4F7CFF
+- Fitness/Sports: energetic orange/red (#E94530), accent: #1B6CA8
+- Education: blue (#1B5CA8), accent: #E8A730
+- Retail/Shopping: vibrant colors based on brand
 
 You MUST respond ONLY with valid JSON in this exact format:
 {
-  "cuts": [
-    {
-      "id": "c1",
-      "duration": 3,
-      "mainText": "春の新作、解禁。",
-      "subText": "3日間限定オファー",
-      "transition": "color-wipe",
-      "animation": "pop",
-      "layout": "bottom",
-      "imageKeyword": "japanese spring cherry blossom cafe food"
-    }
-  ]
+  "cuts": [...],
+  "brandColors": {
+    "colorPrimary": "#E95464",
+    "colorAccent": "#1c9a8b",
+    "textColor": "#ffffff",
+    "bgColor": "#FAF8F5",
+    "style": "standard",
+    "bgm": "bright_pop"
+  }
 }
 
 Do not include any explanation or text outside the JSON.`;
@@ -170,7 +183,7 @@ export async function POST(req: Request) {
     });
 
     const content = completion.choices[0]?.message?.content || '{}';
-    let parsed: { cuts?: Array<PalVideoCut & { imageKeyword?: string }> };
+    let parsed: { cuts?: Array<PalVideoCut & { imageKeyword?: string }>; brandColors?: Record<string, string> };
     try {
       parsed = JSON.parse(content);
     } catch {
@@ -178,6 +191,8 @@ export async function POST(req: Request) {
     }
 
     const rawCuts: Array<PalVideoCut & { imageKeyword?: string }> = Array.isArray(parsed.cuts) ? parsed.cuts : [];
+    // Extract brand colors from AI response
+    const brandColors = parsed.brandColors as Record<string, string> | undefined;
     if (rawCuts.length === 0) {
       return NextResponse.json({ success: false, error: 'カットの生成に失敗しました。' }, { status: 500 });
     }
@@ -201,7 +216,7 @@ export async function POST(req: Request) {
       }),
     );
 
-    return NextResponse.json({ success: true, cuts });
+    return NextResponse.json({ success: true, cuts, brandColors: brandColors || null });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'AI生成に失敗しました。';
     return NextResponse.json({ success: false, error: message }, { status: 500 });

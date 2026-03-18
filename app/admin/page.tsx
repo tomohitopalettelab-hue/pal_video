@@ -94,6 +94,8 @@ const LAYOUT_OPTIONS = [
 
 const STYLE_OPTIONS = [
   { value: 'standard', label: 'スタンダード（ダーク/KenBurns）' },
+  { value: 'magazine', label: 'マガジン（サイドパネル/高級感）' },
+  { value: 'minimal',  label: 'ミニマル（白背景/余白重視）' },
   { value: 'collage',  label: 'コラージュ（白背景/ポラロイドグリッド）' },
 ];
 
@@ -104,6 +106,7 @@ const DEFAULT_PAYLOAD: PalVideoPayload = {
   duration:     30,
   colorPrimary: '#E95464',
   colorAccent:  '#1c9a8b',
+  textColor:    '#ffffff',
   bgm:          'bright_pop',
   style:        'standard',
   cuts:         [],
@@ -498,7 +501,17 @@ export default function AdminPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (body?.cuts && Array.isArray(body.cuts)) {
-        setPayload((prev) => ({ ...prev, cuts: body.cuts }));
+        const bc = body.brandColors;
+        setPayload((prev) => ({
+          ...prev,
+          cuts: body.cuts,
+          ...(bc?.colorPrimary ? { colorPrimary: bc.colorPrimary } : {}),
+          ...(bc?.colorAccent  ? { colorAccent:  bc.colorAccent  } : {}),
+          ...(bc?.textColor    ? { textColor:    bc.textColor    } : {}),
+          ...(bc?.bgColor      ? { bgColor:      bc.bgColor      } : {}),
+          ...(bc?.style        ? { style:        bc.style as 'standard'|'magazine'|'minimal'|'collage' } : {}),
+          ...(bc?.bgm          ? { bgm:          bc.bgm          } : {}),
+        }));
         if (body.cuts.length > 0) setSelectedCutId(body.cuts[0].id);
         setOpMessage(`AIが${body.cuts.length}カットを生成しました。`);
         setTimeout(() => setOpMessage(''), 5000);
@@ -972,7 +985,7 @@ export default function AdminPage() {
             <div>
               <label className="block text-[11px] font-bold text-slate-500 mb-1">テンプレートスタイル</label>
               <select value={editingPayload.style || 'standard'}
-                onChange={(e) => setPayload((p) => ({ ...p, style: e.target.value as 'standard' | 'collage' }))}
+                onChange={(e) => setPayload((p) => ({ ...p, style: e.target.value as 'standard' | 'magazine' | 'minimal' | 'collage' }))}
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none bg-white">
                 {STYLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
@@ -1001,7 +1014,7 @@ export default function AdminPage() {
                 </div>
               </div>
             ) : (
-              /* ── Standard カラー設定 ─────────────────────────────────── */
+              /* ── Standard / Magazine / Minimal カラー設定 ───────────── */
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">メインカラー</label>
@@ -1013,6 +1026,12 @@ export default function AdminPage() {
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">アクセントカラー</label>
                   <input type="color" value={editingPayload.colorAccent || '#1c9a8b'}
                     onChange={(e) => setPayload((p) => ({ ...p, colorAccent: e.target.value }))}
+                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">テキストカラー</label>
+                  <input type="color" value={editingPayload.textColor || '#ffffff'}
+                    onChange={(e) => setPayload((p) => ({ ...p, textColor: e.target.value }))}
                     className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
                 </div>
               </div>

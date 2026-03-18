@@ -27,8 +27,8 @@ export type PalVideoPayload = {
   colorPrimary?: string;
   colorAccent?: string;
   bgm?: string;
-  /** テンプレートスタイル: 'standard' (ダーク/KenBurns) | 'collage' (白背景/ポラロイドグリッド) */
-  style?: 'standard' | 'collage';
+  /** テンプレートスタイル: 'standard' | 'magazine' | 'minimal' | 'collage' */
+  style?: 'standard' | 'magazine' | 'minimal' | 'collage';
   /** collageスタイル用: 背景色 (default: #FAF8F5) */
   bgColor?: string;
   /** collageスタイル用: テキスト色 (default: #1C1C1C) */
