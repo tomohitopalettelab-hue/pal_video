@@ -436,6 +436,7 @@ export default function AdminPage() {
   const [isRendering, setIsRendering]         = useState(false);
   const [isSaving, setIsSaving]               = useState(false);
   const [previewUrl, setPreviewUrl]           = useState<string | null>(null);
+  const [renderProgress, setRenderProgress]   = useState<{ current: number; total: number; label: string } | null>(null);
 
   // State: UI
   const [showMediaModal, setShowMedia]        = useState(false);
@@ -663,29 +664,35 @@ export default function AdminPage() {
         setIsRendering(false);
       } else if (body?.status === 'rendering') {
         // FFmpeg バックグラウンドレンダー → ポーリング
-        setOpMessage('🎬 FFmpegでレンダリング中... Ken Burns処理のため5〜10分かかります');
+        setOpMessage('🎬 レンダリング開始...');
+        setRenderProgress({ current: 0, total: 1, label: '準備中...' });
         const jobIdToPoll = selectedJobId;
         const poll = setInterval(async () => {
           try {
             const jobRes  = await fetch(`/api/admin/job?id=${encodeURIComponent(jobIdToPoll)}`);
             const jobBody = await jobRes.json().catch(() => ({}));
             const job     = jobBody?.job;
+            const prog    = job?.payload?.renderProgress;
+            if (prog) setRenderProgress({ current: prog.current, total: prog.total, label: prog.label });
             if (job?.previewUrl) {
               clearInterval(poll);
               setPreviewUrl(job.previewUrl);
+              setRenderProgress(null);
               setOpMessage('✅ レンダリング完了！');
               setTimeout(() => setOpMessage(''), 5000);
               setIsRendering(false);
             } else if (job?.status === 'エラー') {
               clearInterval(poll);
+              setRenderProgress(null);
               setOpMessage(`⚠️ レンダリングエラー: ${job.payload?.renderError || '不明なエラー'}`);
               setIsRendering(false);
             }
           } catch { /* ポーリング中の一時エラーは無視 */ }
         }, 4000);
-        // 15分でタイムアウト（Ken Burns含む高品質レンダリングは最大10分）
+        // 15分でタイムアウト
         setTimeout(() => {
           clearInterval(poll);
+          setRenderProgress(null);
           setOpMessage('⚠️ タイムアウト。ページを更新して確認してください。'); setIsRendering(false);
         }, 900000);
       } else {
@@ -1240,6 +1247,24 @@ export default function AdminPage() {
             className="w-full py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-bold disabled:opacity-50 hover:bg-slate-50 flex items-center justify-center gap-2">
             {isSaving ? <><Loader2 size={14} className="animate-spin" /> 保存中...</> : '💾 保存'}
           </button>
+
+          {renderProgress && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px] text-slate-500">
+                <span>{renderProgress.label}</span>
+                <span>{renderProgress.current} / {renderProgress.total}</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-2 rounded-full transition-all duration-700"
+                  style={{
+                    width: `${renderProgress.total > 0 ? Math.round((renderProgress.current / renderProgress.total) * 100) : 0}%`,
+                    backgroundColor: ACCENT,
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {opMessage && (
             <p className="text-xs text-center font-medium" style={{ color: ACCENT }}>{opMessage}</p>
