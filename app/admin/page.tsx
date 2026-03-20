@@ -283,107 +283,257 @@ const makeNewCut = (): PalVideoCut => ({
 type CutPreviewCardProps = {
   cut: PalVideoCut | null;
   payload: PalVideoPayload;
+  cutIndex?: number;
   tmplFamily?: string;
   tmplGradient?: string;
   tmplFirstCut?: { layout: string; mainTextPlaceholder: string; subTextPlaceholder: string };
+  size?: 'md' | 'lg';
 };
 
-function CutPreviewCard({ cut, payload, tmplFamily, tmplGradient, tmplFirstCut }: CutPreviewCardProps) {
+function CutPreviewCard({ cut, payload, cutIndex, tmplFamily, tmplGradient, tmplFirstCut, size = 'lg' }: CutPreviewCardProps) {
   const colorPrimary = payload.colorPrimary || '#1A1A2E';
   const colorAccent  = payload.colorAccent  || '#E95464';
-  const textColor    = payload.textColor    || '#ffffff';
-  const style        = payload.style        || 'standard';
   const dest         = payload.destination  || 'instagram_reel';
+  const style        = payload.style        || 'standard';
 
-  // Aspect ratio by destination
   const is169 = dest === 'youtube' || dest === 'web_banner';
   const is11  = dest === 'instagram_feed';
-  const cardW = 108;
-  const cardH = is169 ? 61 : is11 ? 108 : 192; // 16:9 | 1:1 | 9:16
+
+  // Card dimensions — lg: full featured, md: compact
+  const cardW = size === 'lg'
+    ? (is169 ? 440 : is11 ? 300 : 220)
+    : (is169 ? 200 : is11 ? 130 : 90);
+  const cardH = size === 'lg'
+    ? (is169 ? 248 : is11 ? 300 : 391)
+    : (is169 ? 113 : is11 ? 130 : 160);
 
   const layout   = cut?.layout   || tmplFirstCut?.layout   || 'bottom';
   const mainText = cut?.mainText || tmplFirstCut?.mainTextPlaceholder || 'メインテキスト';
   const subText  = cut?.subText  || tmplFirstCut?.subTextPlaceholder  || 'サブテキスト';
   const imageUrl = cut?.imageUrl || null;
+  const label    = tmplFamily || (cutIndex !== undefined ? `CUT ${cutIndex + 1}` : '');
 
-  // Background
-  const gradient = tmplGradient || `linear-gradient(135deg, ${colorPrimary} 0%, ${colorAccent} 100%)`;
+  // Scale factor for font sizes relative to card width
+  const s = cardW / 440;
 
-  // Text position
-  const textPosStyle: React.CSSProperties =
-    layout === 'top'    ? { top: 6, left: 0, right: 0, padding: '0 6px' } :
-    layout === 'center' ? { top: '50%', left: 0, right: 0, transform: 'translateY(-50%)', textAlign: 'center', padding: '0 6px' } :
-                          { bottom: 6, left: 0, right: 0, padding: '0 6px' };
+  // Left strip width
+  const stripW = Math.round(cardW * 0.115);
 
-  // Overlay gradient for dark styles
-  const showOverlay = imageUrl && style !== 'minimal';
-  const overlayStyle: React.CSSProperties = {
-    background: layout === 'top'
-      ? `linear-gradient(to bottom, ${colorPrimary}CC 0%, transparent 60%)`
+  // Background when no image
+  const bgGrad = tmplGradient || `linear-gradient(145deg, ${colorPrimary} 0%, ${colorPrimary}dd 60%, ${colorAccent}55 100%)`;
+
+  // Text container position
+  const textStyle: React.CSSProperties =
+    layout === 'top'
+      ? { position: 'absolute', top: Math.round(cardH * 0.08), left: stripW + Math.round(12 * s), right: Math.round(10 * s) }
       : layout === 'center'
-      ? `${colorPrimary}66`
-      : `linear-gradient(to top, ${colorPrimary}CC 0%, transparent 60%)`,
-  };
+      ? { position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: stripW + Math.round(12 * s), right: Math.round(10 * s) }
+      : { position: 'absolute', bottom: Math.round(cardH * 0.06), left: stripW + Math.round(12 * s), right: Math.round(10 * s) };
+
+  // animKey triggers re-animation on content change
+  const animKey = `${cut?.id ?? 'tmpl'}_${mainText}_${subText}_${colorAccent}_${imageUrl}`;
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl shadow-lg flex-shrink-0"
-      style={{ width: cardW, height: cardH, background: imageUrl ? undefined : gradient }}
+      key={animKey}
+      className="relative overflow-hidden flex-shrink-0"
+      style={{
+        width: cardW,
+        height: cardH,
+        borderRadius: Math.round(10 * s),
+        background: imageUrl ? colorPrimary : bgGrad,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)',
+      }}
     >
-      {/* Image background */}
+      {/* ── Background Image ── */}
       {imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <img
+          src={imageUrl} alt=""
+          className="pv-img absolute inset-0 w-full h-full object-cover"
+        />
       )}
 
-      {/* Gradient overlay */}
-      {showOverlay && (
-        <div className="absolute inset-0" style={overlayStyle} />
+      {/* ── Dark overlay (image only, non-minimal styles) ── */}
+      {imageUrl && style !== 'minimal' && (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: layout === 'top'
+              ? `linear-gradient(160deg, ${colorPrimary}BB 0%, ${colorPrimary}44 45%, transparent 100%)`
+              : layout === 'center'
+              ? `${colorPrimary}55`
+              : `linear-gradient(to top, ${colorPrimary}DD 0%, ${colorPrimary}66 40%, transparent 75%)`,
+          }}
+        />
       )}
 
-      {/* Gradient style (no image needed) */}
-      {style === 'gradient' && !imageUrl && (
-        <div className="absolute inset-0" style={{ background: gradient }} />
+      {/* ── Left accent strip ── */}
+      <div
+        className="pv-strip absolute top-0 left-0 bottom-0 flex flex-col items-center"
+        style={{
+          width: stripW,
+          backgroundColor: colorAccent,
+          paddingTop: Math.round(10 * s),
+          paddingBottom: Math.round(10 * s),
+          zIndex: 4,
+        }}
+      >
+        {/* Top dot (filled) */}
+        <div style={{
+          width: Math.round(5 * s), height: Math.round(5 * s),
+          borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.95)',
+          flexShrink: 0,
+        }} />
+
+        {/* Brand / cut label — rotated */}
+        {label && size === 'lg' && (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <p style={{
+              writingMode: 'vertical-rl',
+              textOrientation: 'mixed',
+              fontSize: Math.round(7 * s),
+              fontWeight: 900,
+              letterSpacing: '0.18em',
+              color: 'rgba(255,255,255,0.92)',
+              lineHeight: 1,
+              userSelect: 'none',
+            }}>
+              {label.toUpperCase()}
+            </p>
+          </div>
+        )}
+
+        {/* Bottom dot (outline) */}
+        <div style={{
+          width: Math.round(4 * s), height: Math.round(4 * s),
+          borderRadius: '50%', border: `${Math.max(1, Math.round(1 * s))}px solid rgba(255,255,255,0.7)`,
+          flexShrink: 0,
+        }} />
+      </div>
+
+      {/* ── + Corner decoration — top right ── */}
+      <div
+        className="pv-plus1 absolute font-black select-none"
+        style={{
+          top: Math.round(8 * s), right: Math.round(10 * s),
+          fontSize: Math.round(18 * s), lineHeight: 1,
+          color: 'rgba(255,255,255,0.65)',
+          zIndex: 4,
+        }}
+      >+</div>
+
+      {/* ── + Corner decoration — bottom left (inside strip margin) ── */}
+      <div
+        className="pv-plus2 absolute font-black select-none"
+        style={{
+          bottom: Math.round(8 * s), left: stripW + Math.round(8 * s),
+          fontSize: Math.round(13 * s), lineHeight: 1,
+          color: colorAccent,
+          zIndex: 4,
+        }}
+      >+</div>
+
+      {/* ── Dot grid — bottom right ── */}
+      {size === 'lg' && (
+        <div
+          className="pv-dots absolute"
+          style={{
+            bottom: Math.round(10 * s), right: Math.round(10 * s),
+            display: 'grid',
+            gridTemplateColumns: `repeat(4, ${Math.round(3 * s)}px)`,
+            gap: Math.round(4 * s),
+            zIndex: 3,
+          }}
+        >
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} style={{
+              width: Math.round(2.5 * s), height: Math.round(2.5 * s),
+              borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.28)',
+            }} />
+          ))}
+        </div>
       )}
 
-      {/* Text overlay */}
-      <div className="absolute" style={textPosStyle}>
+      {/* ── Horizontal dash line — top of text area ── */}
+      {size === 'lg' && (
+        <div
+          className="absolute"
+          style={{
+            ...(layout === 'top'
+              ? { top: Math.round(cardH * 0.065), left: stripW + Math.round(12 * s) }
+              : layout === 'center'
+              ? { top: '48%', transform: 'translateY(-50%) translateY(-16px)', left: stripW + Math.round(12 * s) }
+              : { bottom: Math.round(cardH * 0.06 + (subText ? 36 * s : 20 * s)) + Math.round(16 * s), left: stripW + Math.round(12 * s) }),
+            width: Math.round(28 * s), height: Math.round(2.5 * s),
+            backgroundColor: colorAccent,
+            zIndex: 4,
+          }}
+        />
+      )}
+
+      {/* ── Text overlay ── */}
+      <div style={{ ...textStyle, zIndex: 5 }}>
+        {/* Accent line (above main text, only in lg) */}
+        {size === 'lg' && (
+          <div
+            className="pv-line"
+            style={{
+              width: Math.round(24 * s), height: Math.round(2.5 * s),
+              backgroundColor: colorAccent,
+              marginBottom: Math.round(6 * s),
+            }}
+          />
+        )}
+
+        {/* Main text */}
         {mainText && (
           <p
-            className="font-black leading-tight truncate"
-            style={{ fontSize: 7, color: textColor, textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}
+            className="pv-main font-black leading-tight"
+            style={{
+              fontSize: Math.round((size === 'lg' ? 15 : 8) * s),
+              color: '#ffffff',
+              textShadow: '0 2px 8px rgba(0,0,0,0.6)',
+              lineHeight: 1.25,
+              wordBreak: 'break-word',
+            }}
           >
             {mainText}
           </p>
         )}
+
+        {/* Sub text */}
         {subText && (
           <p
-            className="leading-tight truncate"
-            style={{ fontSize: 5.5, color: `${textColor}CC`, marginTop: 1 }}
+            className="pv-sub leading-tight"
+            style={{
+              fontSize: Math.round((size === 'lg' ? 9.5 : 5.5) * s),
+              color: 'rgba(255,255,255,0.82)',
+              marginTop: Math.round(5 * s),
+              lineHeight: 1.4,
+              wordBreak: 'break-word',
+            }}
           >
             {subText}
           </p>
         )}
       </div>
 
-      {/* Accent line */}
-      <div
-        className="absolute"
-        style={{
-          ...(layout === 'top'    ? { top: 0, left: 0, right: 0, height: 2 } :
-             layout === 'center'  ? { top: 0, left: 0, right: 0, height: 2 } :
-                                    { bottom: 0, left: 0, right: 0, height: 2 }),
-          backgroundColor: colorAccent,
-        }}
-      />
-
-      {/* Style label */}
-      {tmplFamily && (
+      {/* ── Duration badge ── */}
+      {cut && size === 'lg' && (
         <div
-          className="absolute top-1.5 left-1.5 text-white rounded px-1"
-          style={{ fontSize: 5, backgroundColor: `${colorPrimary}CC` }}
+          className="absolute"
+          style={{
+            top: Math.round(8 * s), left: stripW + Math.round(8 * s),
+            fontSize: Math.round(7.5 * s),
+            color: 'rgba(255,255,255,0.75)',
+            backgroundColor: 'rgba(0,0,0,0.35)',
+            padding: `${Math.round(2 * s)}px ${Math.round(5 * s)}px`,
+            borderRadius: Math.round(4 * s),
+            zIndex: 4,
+          }}
         >
-          {tmplFamily}
+          {cut.duration}s
         </div>
       )}
     </div>
@@ -1181,67 +1331,118 @@ export default function AdminPage() {
                   const tmpl = TEMPLATES.find((t) => t.id === selectedTmplId);
                   const cuts = editingPayload.cuts || [];
                   const activeCut = cuts.find((c) => c.id === selectedCutId) || cuts[0] || null;
-                  const cutIndex  = activeCut ? cuts.findIndex((c) => c.id === activeCut.id) : -1;
+                  const activeCutIdx = activeCut ? cuts.findIndex((c) => c.id === activeCut.id) : -1;
+                  const dest = editingPayload.destination || 'instagram_reel';
+                  const is169 = dest === 'youtube' || dest === 'web_banner';
+                  // For portrait formats: side-by-side layout; for landscape: stacked
+                  const sideLayout = !is169;
                   return (
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                      <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
-                        <p className="text-[11px] font-bold text-slate-500 uppercase">ライブプレビュー</p>
-                        <span className="text-[10px] text-slate-400">
-                          {activeCut && cutIndex >= 0
-                            ? `カット #${cutIndex + 1} / ${cuts.length}`
-                            : tmpl ? `${tmpl.family}` : ''}
-                        </span>
-                      </div>
-                      <div className="p-3 flex gap-3 items-start">
-                        {/* Phone mockup preview */}
-                        <CutPreviewCard
-                          cut={activeCut}
-                          payload={editingPayload}
-                          tmplFamily={!activeCut && tmpl ? tmpl.family : undefined}
-                          tmplGradient={tmpl?.thumbnailGradient}
-                          tmplFirstCut={tmpl?.cuts[0]}
-                        />
-                        {/* Cut list */}
-                        <div className="flex-1 min-w-0 space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
-                          {cuts.length === 0 && tmpl && (
-                            <div className="space-y-1">
-                              {tmpl.cuts.slice(0, 6).map((tc, i) => (
-                                <div key={i} className="px-2.5 py-1.5 rounded-lg border border-slate-100 bg-slate-50">
-                                  <div className="flex items-center justify-between mb-0.5">
-                                    <span className="text-[9px] font-bold text-slate-400">#{i + 1}</span>
-                                    <span className="text-[9px] text-slate-300">{Math.round(tmpl.duration * tc.durationRatio)}s</span>
-                                  </div>
-                                  <p className="text-[10px] text-slate-500 truncate">{tc.mainTextPlaceholder}</p>
-                                  <p className="text-[9px] text-slate-400 truncate">{tc.subTextPlaceholder}</p>
-                                </div>
-                              ))}
-                            </div>
+                    <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+                      {/* Header */}
+                      <div className="px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT }} />
+                          <p className="text-[11px] font-black text-white/80 uppercase tracking-widest">Live Preview</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {activeCut && activeCutIdx >= 0 && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${ACCENT}30`, color: ACCENT }}>
+                              CUT {activeCutIdx + 1} / {cuts.length}
+                            </span>
                           )}
+                          {!activeCut && tmpl && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white/50" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+                              {tmpl.family}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Main content */}
+                      <div className={`px-4 pb-4 flex gap-4 ${sideLayout ? 'flex-row items-start' : 'flex-col items-center'}`}>
+
+                        {/* Large preview card */}
+                        <div className="flex-shrink-0">
+                          <CutPreviewCard
+                            cut={activeCut}
+                            cutIndex={activeCutIdx >= 0 ? activeCutIdx : undefined}
+                            payload={editingPayload}
+                            tmplFamily={!activeCut && tmpl ? tmpl.family : undefined}
+                            tmplGradient={tmpl?.thumbnailGradient}
+                            tmplFirstCut={tmpl?.cuts[0]}
+                            size="lg"
+                          />
+                        </div>
+
+                        {/* Cut strip — scroll of small previews */}
+                        <div className={`flex gap-2 ${sideLayout ? 'flex-col overflow-y-auto max-h-96' : 'flex-row overflow-x-auto w-full'} no-scrollbar`}>
+
+                          {/* Template placeholder cuts */}
+                          {cuts.length === 0 && tmpl && tmpl.cuts.slice(0, 8).map((tc, i) => (
+                            <div key={i}
+                              className="flex-shrink-0 rounded-xl overflow-hidden"
+                              style={{
+                                width: sideLayout ? 80 : 60, height: sideLayout ? 142 : 80,
+                                background: tmpl.thumbnailGradient,
+                                opacity: 0.6,
+                                border: '2px solid rgba(255,255,255,0.1)',
+                              }}>
+                              <div className="w-full h-full flex items-end p-1.5">
+                                <p className="text-[8px] text-white/80 font-bold leading-tight line-clamp-2">{tc.mainTextPlaceholder}</p>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Actual cut thumbnails */}
                           {cuts.map((cut, idx) => {
-                            const isActive = cut.id === (activeCut?.id);
+                            const isActive = cut.id === activeCut?.id;
                             return (
                               <button
                                 key={cut.id}
                                 onClick={() => setSelectedCutId(cut.id)}
-                                className={`w-full text-left px-2.5 py-1.5 rounded-lg border transition-all ${
-                                  isActive
-                                    ? 'border-rose-300 bg-rose-50'
-                                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                                }`}
-                                style={isActive ? { borderColor: ACCENT } : {}}>
-                                <div className="flex items-center justify-between mb-0.5">
-                                  <span className="text-[9px] font-bold text-slate-500">#{idx + 1}</span>
-                                  <span className="text-[9px] text-slate-400">{cut.duration}s · {cut.layout}</span>
+                                className="flex-shrink-0 rounded-xl overflow-hidden transition-all relative group"
+                                style={{
+                                  width: sideLayout ? 80 : 64,
+                                  height: sideLayout ? 142 : 80,
+                                  border: isActive ? `2px solid ${ACCENT}` : '2px solid rgba(255,255,255,0.12)',
+                                  boxShadow: isActive ? `0 0 12px ${ACCENT}66` : 'none',
+                                  transform: isActive ? 'scale(1.04)' : 'scale(1)',
+                                }}
+                              >
+                                <CutPreviewCard
+                                  cut={cut}
+                                  cutIndex={idx}
+                                  payload={editingPayload}
+                                  size="md"
+                                />
+                                {/* Cut number badge */}
+                                <div className="absolute top-1 right-1 rounded-full flex items-center justify-center"
+                                  style={{
+                                    width: 14, height: 14,
+                                    backgroundColor: isActive ? ACCENT : 'rgba(0,0,0,0.55)',
+                                    fontSize: 7, fontWeight: 900, color: '#fff',
+                                  }}>
+                                  {idx + 1}
                                 </div>
-                                <p className="text-[10px] font-medium text-slate-700 truncate">
-                                  {cut.mainText || <span className="text-slate-300">(テキストなし)</span>}
-                                </p>
-                                {cut.subText && (
-                                  <p className="text-[9px] text-slate-400 truncate">{cut.subText}</p>
-                                )}
                               </button>
                             );
                           })}
+
+                          {/* Add cut button */}
+                          {cuts.length > 0 && (
+                            <button
+                              onClick={addCut}
+                              className="flex-shrink-0 rounded-xl flex flex-col items-center justify-center gap-1 transition-all hover:bg-white/10"
+                              style={{
+                                width: sideLayout ? 80 : 64,
+                                height: sideLayout ? 142 : 80,
+                                border: '2px dashed rgba(255,255,255,0.2)',
+                              }}
+                            >
+                              <Plus size={14} className="text-white/40" />
+                              <span className="text-[8px] text-white/30">追加</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1288,13 +1489,31 @@ export default function AdminPage() {
 
                 {/* Cut Detail Editor */}
                 {selectedCut && (
-                  <div className="bg-white rounded-xl border border-slate-200 p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-[11px] font-bold text-slate-500 uppercase">カット編集</p>
-                      <span className="text-[10px] text-slate-400">
-                        #{(editingPayload.cuts || []).findIndex((c) => c.id === selectedCut.id) + 1}
-                      </span>
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    {/* Editor header with mini preview */}
+                    <div className="flex items-stretch gap-0">
+                      {/* Mini live preview strip */}
+                      <div className="flex-shrink-0 p-3 flex items-center justify-center"
+                        style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)', minWidth: 120 }}>
+                        <CutPreviewCard
+                          cut={selectedCut}
+                          cutIndex={(editingPayload.cuts || []).findIndex((c) => c.id === selectedCut.id)}
+                          payload={editingPayload}
+                          size="md"
+                        />
+                      </div>
+                      {/* Title bar */}
+                      <div className="flex-1 flex items-center justify-between px-3 border-b border-slate-100 bg-slate-50/50">
+                        <div>
+                          <p className="text-[11px] font-black text-slate-600 uppercase tracking-wide">カット編集</p>
+                          <p className="text-[10px] text-slate-400">
+                            #{(editingPayload.cuts || []).findIndex((c) => c.id === selectedCut.id) + 1} · {selectedCut.duration}s · {selectedCut.layout}
+                          </p>
+                        </div>
+                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: ACCENT }} title="リアルタイム反映中" />
+                      </div>
                     </div>
+                    <div className="p-4">
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -1423,6 +1642,7 @@ export default function AdminPage() {
                           </div>
                         </div>
                       )}
+                    </div>
                     </div>
                   </div>
                 )}
