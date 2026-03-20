@@ -3,10 +3,8 @@
 html, body {
   margin: 0;
   padding: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden !important;
   background-color: #F5F0F2;
+  /* overflow は各ページのルート div で個別に制御 */
 }
 
 .custom-scrollbar::-webkit-scrollbar {
