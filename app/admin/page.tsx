@@ -278,6 +278,118 @@ const makeNewCut = (): PalVideoCut => ({
   transition: 'fade', animation: 'slide', layout: 'bottom', imageUrl: null,
 });
 
+// ── Cut Preview Card ──────────────────────────────────────────────────────────
+
+type CutPreviewCardProps = {
+  cut: PalVideoCut | null;
+  payload: PalVideoPayload;
+  tmplFamily?: string;
+  tmplGradient?: string;
+  tmplFirstCut?: { layout: string; mainTextPlaceholder: string; subTextPlaceholder: string };
+};
+
+function CutPreviewCard({ cut, payload, tmplFamily, tmplGradient, tmplFirstCut }: CutPreviewCardProps) {
+  const colorPrimary = payload.colorPrimary || '#1A1A2E';
+  const colorAccent  = payload.colorAccent  || '#E95464';
+  const textColor    = payload.textColor    || '#ffffff';
+  const style        = payload.style        || 'standard';
+  const dest         = payload.destination  || 'instagram_reel';
+
+  // Aspect ratio by destination
+  const is169 = dest === 'youtube' || dest === 'web_banner';
+  const is11  = dest === 'instagram_feed';
+  const cardW = 108;
+  const cardH = is169 ? 61 : is11 ? 108 : 192; // 16:9 | 1:1 | 9:16
+
+  const layout   = cut?.layout   || tmplFirstCut?.layout   || 'bottom';
+  const mainText = cut?.mainText || tmplFirstCut?.mainTextPlaceholder || 'メインテキスト';
+  const subText  = cut?.subText  || tmplFirstCut?.subTextPlaceholder  || 'サブテキスト';
+  const imageUrl = cut?.imageUrl || null;
+
+  // Background
+  const gradient = tmplGradient || `linear-gradient(135deg, ${colorPrimary} 0%, ${colorAccent} 100%)`;
+
+  // Text position
+  const textPosStyle: React.CSSProperties =
+    layout === 'top'    ? { top: 6, left: 0, right: 0, padding: '0 6px' } :
+    layout === 'center' ? { top: '50%', left: 0, right: 0, transform: 'translateY(-50%)', textAlign: 'center', padding: '0 6px' } :
+                          { bottom: 6, left: 0, right: 0, padding: '0 6px' };
+
+  // Overlay gradient for dark styles
+  const showOverlay = imageUrl && style !== 'minimal';
+  const overlayStyle: React.CSSProperties = {
+    background: layout === 'top'
+      ? `linear-gradient(to bottom, ${colorPrimary}CC 0%, transparent 60%)`
+      : layout === 'center'
+      ? `${colorPrimary}66`
+      : `linear-gradient(to top, ${colorPrimary}CC 0%, transparent 60%)`,
+  };
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-xl shadow-lg flex-shrink-0"
+      style={{ width: cardW, height: cardH, background: imageUrl ? undefined : gradient }}
+    >
+      {/* Image background */}
+      {imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      )}
+
+      {/* Gradient overlay */}
+      {showOverlay && (
+        <div className="absolute inset-0" style={overlayStyle} />
+      )}
+
+      {/* Gradient style (no image needed) */}
+      {style === 'gradient' && !imageUrl && (
+        <div className="absolute inset-0" style={{ background: gradient }} />
+      )}
+
+      {/* Text overlay */}
+      <div className="absolute" style={textPosStyle}>
+        {mainText && (
+          <p
+            className="font-black leading-tight truncate"
+            style={{ fontSize: 7, color: textColor, textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}
+          >
+            {mainText}
+          </p>
+        )}
+        {subText && (
+          <p
+            className="leading-tight truncate"
+            style={{ fontSize: 5.5, color: `${textColor}CC`, marginTop: 1 }}
+          >
+            {subText}
+          </p>
+        )}
+      </div>
+
+      {/* Accent line */}
+      <div
+        className="absolute"
+        style={{
+          ...(layout === 'top'    ? { top: 0, left: 0, right: 0, height: 2 } :
+             layout === 'center'  ? { top: 0, left: 0, right: 0, height: 2 } :
+                                    { bottom: 0, left: 0, right: 0, height: 2 }),
+          backgroundColor: colorAccent,
+        }}
+      />
+
+      {/* Style label */}
+      {tmplFamily && (
+        <div
+          className="absolute top-1.5 left-1.5 text-white rounded px-1"
+          style={{ fontSize: 5, backgroundColor: `${colorPrimary}CC` }}
+        >
+          {tmplFamily}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Hearing Modal ─────────────────────────────────────────────────────────────
 
 type HearingModalProps = {
@@ -1063,6 +1175,78 @@ export default function AdminPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* ── Live Preview Section ──────────────────────────────── */}
+                {(selectedTmplId || (editingPayload.cuts || []).length > 0) && (() => {
+                  const tmpl = TEMPLATES.find((t) => t.id === selectedTmplId);
+                  const cuts = editingPayload.cuts || [];
+                  const activeCut = cuts.find((c) => c.id === selectedCutId) || cuts[0] || null;
+                  const cutIndex  = activeCut ? cuts.findIndex((c) => c.id === activeCut.id) : -1;
+                  return (
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                      <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
+                        <p className="text-[11px] font-bold text-slate-500 uppercase">ライブプレビュー</p>
+                        <span className="text-[10px] text-slate-400">
+                          {activeCut && cutIndex >= 0
+                            ? `カット #${cutIndex + 1} / ${cuts.length}`
+                            : tmpl ? `${tmpl.family}` : ''}
+                        </span>
+                      </div>
+                      <div className="p-3 flex gap-3 items-start">
+                        {/* Phone mockup preview */}
+                        <CutPreviewCard
+                          cut={activeCut}
+                          payload={editingPayload}
+                          tmplFamily={!activeCut && tmpl ? tmpl.family : undefined}
+                          tmplGradient={tmpl?.thumbnailGradient}
+                          tmplFirstCut={tmpl?.cuts[0]}
+                        />
+                        {/* Cut list */}
+                        <div className="flex-1 min-w-0 space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                          {cuts.length === 0 && tmpl && (
+                            <div className="space-y-1">
+                              {tmpl.cuts.slice(0, 6).map((tc, i) => (
+                                <div key={i} className="px-2.5 py-1.5 rounded-lg border border-slate-100 bg-slate-50">
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <span className="text-[9px] font-bold text-slate-400">#{i + 1}</span>
+                                    <span className="text-[9px] text-slate-300">{Math.round(tmpl.duration * tc.durationRatio)}s</span>
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 truncate">{tc.mainTextPlaceholder}</p>
+                                  <p className="text-[9px] text-slate-400 truncate">{tc.subTextPlaceholder}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {cuts.map((cut, idx) => {
+                            const isActive = cut.id === (activeCut?.id);
+                            return (
+                              <button
+                                key={cut.id}
+                                onClick={() => setSelectedCutId(cut.id)}
+                                className={`w-full text-left px-2.5 py-1.5 rounded-lg border transition-all ${
+                                  isActive
+                                    ? 'border-rose-300 bg-rose-50'
+                                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                                }`}
+                                style={isActive ? { borderColor: ACCENT } : {}}>
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <span className="text-[9px] font-bold text-slate-500">#{idx + 1}</span>
+                                  <span className="text-[9px] text-slate-400">{cut.duration}s · {cut.layout}</span>
+                                </div>
+                                <p className="text-[10px] font-medium text-slate-700 truncate">
+                                  {cut.mainText || <span className="text-slate-300">(テキストなし)</span>}
+                                </p>
+                                {cut.subText && (
+                                  <p className="text-[9px] text-slate-400 truncate">{cut.subText}</p>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Cut Timeline */}
                 <div>
