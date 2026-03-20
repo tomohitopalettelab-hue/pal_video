@@ -11,6 +11,111 @@ import type { PalVideoJob, PalVideoCut, PalVideoPayload } from '../api/_lib/pal-
 
 const ACCENT = '#E95464';
 
+// ── 10 Template Presets (pal_studio 連携) ────────────────────────────────────
+type TemplatePreset = {
+  id: string;
+  name: string;
+  desc: string;
+  colorPrimary: string;
+  colorAccent: string;
+  textColor: string;
+  bgColor: string;
+  style: 'standard' | 'magazine' | 'minimal' | 'collage' | 'gradient';
+  bgm: string;
+};
+
+const TEMPLATE_PRESETS: TemplatePreset[] = [
+  {
+    id: 'modern',
+    name: 'Modern',
+    desc: 'シンプル & クリーン',
+    colorPrimary: '#1A1A2E', colorAccent: '#E95464',
+    textColor: '#ffffff', bgColor: '#F8F9FA',
+    style: 'standard', bgm: 'cool_minimal',
+  },
+  {
+    id: 'elegant',
+    name: 'Elegant',
+    desc: 'ラグジュアリー',
+    colorPrimary: '#1C1C1C', colorAccent: '#C4973A',
+    textColor: '#ffffff', bgColor: '#0D0D0D',
+    style: 'magazine', bgm: 'cinematic',
+  },
+  {
+    id: 'corporate',
+    name: 'Corporate',
+    desc: '信頼と実績',
+    colorPrimary: '#1A2744', colorAccent: '#2A7FC1',
+    textColor: '#ffffff', bgColor: '#F5F7FA',
+    style: 'standard', bgm: 'cool_minimal',
+  },
+  {
+    id: 'pop',
+    name: 'Pop',
+    desc: '元気 & 親しみ',
+    colorPrimary: '#E95464', colorAccent: '#F5A623',
+    textColor: '#ffffff', bgColor: '#FFF5F5',
+    style: 'gradient', bgm: 'bright_pop',
+  },
+  {
+    id: 'minimal',
+    name: 'Minimal',
+    desc: '洗練された余白',
+    colorPrimary: '#1A1A1A', colorAccent: '#888888',
+    textColor: '#1A1A1A', bgColor: '#FFFFFF',
+    style: 'minimal', bgm: 'cool_minimal',
+  },
+  {
+    id: 'dark',
+    name: 'Dark',
+    desc: 'テック & クール',
+    colorPrimary: '#0D1B2A', colorAccent: '#4F7CFF',
+    textColor: '#ffffff', bgColor: '#0A0A0A',
+    style: 'gradient', bgm: 'cool_minimal',
+  },
+  {
+    id: 'natural',
+    name: 'Natural',
+    desc: 'オーガニック',
+    colorPrimary: '#3A5A40', colorAccent: '#D4A853',
+    textColor: '#ffffff', bgColor: '#F5F0E8',
+    style: 'standard', bgm: 'natural_warm',
+  },
+  {
+    id: 'japanese',
+    name: 'Japanese',
+    desc: '和の伝統',
+    colorPrimary: '#1C3D5A', colorAccent: '#C0392B',
+    textColor: '#ffffff', bgColor: '#FDF5E6',
+    style: 'magazine', bgm: 'cinematic',
+  },
+  {
+    id: 'portfolio',
+    name: 'Portfolio',
+    desc: '作品重視',
+    colorPrimary: '#212121', colorAccent: '#FF6B35',
+    textColor: '#ffffff', bgColor: '#F5F5F5',
+    style: 'collage', bgm: 'cool_minimal',
+  },
+  {
+    id: 'lp',
+    name: 'LP',
+    desc: 'コンバージョン特化',
+    colorPrimary: '#E95464', colorAccent: '#1A1A1A',
+    textColor: '#ffffff', bgColor: '#FFF5F5',
+    style: 'standard', bgm: 'bright_pop',
+  },
+];
+
+// 用途 → 推奨テンプレート順
+const PURPOSE_TEMPLATE_DEFAULTS: Record<string, string[]> = {
+  promotion:   ['modern', 'pop', 'corporate'],
+  sns_post:    ['modern', 'natural', 'pop'],
+  sns_ad:      ['pop', 'lp', 'dark'],
+  review:      ['natural', 'modern', 'japanese'],
+  achievement: ['corporate', 'elegant', 'portfolio'],
+};
+
 const PURPOSE_OPTIONS = [
   { value: 'promotion',    label: 'プロモーション' },
   { value: 'sns_post',     label: 'SNS投稿' },
@@ -111,11 +216,13 @@ const DEFAULT_PAYLOAD: PalVideoPayload = {
   purpose:      'promotion',
   destination:  'instagram_reel',
   duration:     30,
-  colorPrimary: '#E95464',
-  colorAccent:  '#1c9a8b',
+  colorPrimary: '#1A1A2E',
+  colorAccent:  '#E95464',
   textColor:    '#ffffff',
-  bgm:          'bright_pop',
+  bgColor:      '#F8F9FA',
+  bgm:          'cool_minimal',
   style:        'standard',
+  templateId:   'modern',
   cuts:         [],
 };
 
@@ -335,6 +442,7 @@ export default function AdminPage() {
   const [mediaSlot, setMediaSlot]             = useState<number>(0); // 0=single/slot0, 1-3=collage slots
   const [showHearingModal, setShowHearing]    = useState(false);
   const [showHearingInline, setShowInline]    = useState(false);
+  const [showColorOverride, setShowColor]     = useState(false);
   const [opMessage, setOpMessage]             = useState('');
 
   // Derived
@@ -502,6 +610,8 @@ export default function AdminPage() {
           jobId:           selectedJobId,
           purpose:         editingPayload.purpose      || 'promotion',
           destination:     editingPayload.destination  || 'instagram_reel',
+          templateId:      editingPayload.templateId,
+          templateName:    TEMPLATE_PRESETS.find((t) => t.id === editingPayload.templateId)?.name,
           hearingData:     editingPayload.hearingData,
           hearingAnswers:  editingPayload.hearingAnswers,
           hearingMessages: editingPayload.hearingMessages,
@@ -930,11 +1040,10 @@ export default function AdminPage() {
       {/* ── RIGHT PANEL ──────────────────────────────────────────── */}
       <aside className="w-80 border-l border-slate-200 bg-white flex flex-col flex-shrink-0 overflow-y-auto custom-scrollbar">
 
-        {/* Video settings */}
+        {/* ── 動画設定 ─────────────────────────────────────── */}
         <div className="p-4 border-b border-slate-100">
           <p className="text-[11px] font-bold text-slate-500 uppercase mb-3">動画設定</p>
           <div className="space-y-2.5">
-
             <div>
               <label className="block text-[11px] font-bold text-slate-500 mb-1">タイトル</label>
               <input value={editingPayload.title || ''}
@@ -944,23 +1053,29 @@ export default function AdminPage() {
                 onFocus={(e) => (e.target.style.boxShadow = `0 0 0 2px ${ACCENT}40`)}
                 onBlur={(e) => (e.target.style.boxShadow = '')} />
             </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">用途</label>
-              <select value={editingPayload.purpose || 'promotion'}
-                onChange={(e) => setPayload((p) => ({ ...p, purpose: e.target.value }))}
-                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none bg-white">
-                {PURPOSE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">用途</label>
+                <select value={editingPayload.purpose || 'promotion'}
+                  onChange={(e) => setPayload((p) => ({ ...p, purpose: e.target.value }))}
+                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none bg-white">
+                  {PURPOSE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">尺</label>
+                <select value={editingPayload.duration || 30}
+                  onChange={(e) => setPayload((p) => ({ ...p, duration: Number(e.target.value) }))}
+                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none bg-white">
+                  {DURATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
             </div>
-
             <div>
               <label className="block text-[11px] font-bold text-slate-500 mb-1">
                 投稿先
                 {destDimsLabel && (
-                  <span className="ml-1.5 text-[9px] font-normal text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                    {destDimsLabel}
-                  </span>
+                  <span className="ml-1.5 text-[9px] font-normal text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{destDimsLabel}</span>
                 )}
               </label>
               <select value={editingPayload.destination || 'instagram_reel'}
@@ -971,81 +1086,103 @@ export default function AdminPage() {
                 ))}
               </select>
             </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">尺</label>
-              <select value={editingPayload.duration || 30}
-                onChange={(e) => setPayload((p) => ({ ...p, duration: Number(e.target.value) }))}
-                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none bg-white">
-                {DURATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">BGM</label>
-              <select value={editingPayload.bgm || 'bright_pop'}
-                onChange={(e) => setPayload((p) => ({ ...p, bgm: e.target.value }))}
-                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none bg-white">
-                {BGM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-
-            {/* ── テンプレートスタイル ─────────────────────────────────── */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">テンプレートスタイル</label>
-              <select value={editingPayload.style || 'standard'}
-                onChange={(e) => setPayload((p) => ({ ...p, style: e.target.value as 'standard' | 'magazine' | 'minimal' | 'collage' | 'gradient' }))}
-                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none bg-white">
-                {STYLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-
-            {editingPayload.style === 'collage' ? (
-              /* ── Collage カラー設定 ──────────────────────────────────── */
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">背景色</label>
-                  <input type="color" value={editingPayload.bgColor || '#FAF8F5'}
-                    onChange={(e) => setPayload((p) => ({ ...p, bgColor: e.target.value }))}
-                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">テキスト色</label>
-                  <input type="color" value={editingPayload.textColor || '#1C1C1C'}
-                    onChange={(e) => setPayload((p) => ({ ...p, textColor: e.target.value }))}
-                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">アクセント</label>
-                  <input type="color" value={editingPayload.colorAccent || '#9C7B5C'}
-                    onChange={(e) => setPayload((p) => ({ ...p, colorAccent: e.target.value }))}
-                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
-                </div>
-              </div>
-            ) : (
-              /* ── Standard / Magazine / Minimal カラー設定 ───────────── */
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">メインカラー</label>
-                  <input type="color" value={editingPayload.colorPrimary || '#E95464'}
-                    onChange={(e) => setPayload((p) => ({ ...p, colorPrimary: e.target.value }))}
-                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">アクセントカラー</label>
-                  <input type="color" value={editingPayload.colorAccent || '#1c9a8b'}
-                    onChange={(e) => setPayload((p) => ({ ...p, colorAccent: e.target.value }))}
-                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">テキストカラー</label>
-                  <input type="color" value={editingPayload.textColor || '#ffffff'}
-                    onChange={(e) => setPayload((p) => ({ ...p, textColor: e.target.value }))}
-                    className="w-full h-8 border border-slate-300 rounded-lg cursor-pointer" />
-                </div>
-              </div>
-            )}
           </div>
+        </div>
+
+        {/* ── テンプレート選択 ──────────────────────────────── */}
+        <div className="p-4 border-b border-slate-100">
+          <p className="text-[11px] font-bold text-slate-500 uppercase mb-2">テンプレート</p>
+          {(() => {
+            const recommended = PURPOSE_TEMPLATE_DEFAULTS[editingPayload.purpose || 'promotion'] || [];
+            return (
+              <div className="grid grid-cols-2 gap-1.5">
+                {TEMPLATE_PRESETS.map((tpl) => {
+                  const isSelected = (editingPayload.templateId || 'modern') === tpl.id;
+                  const isRecommended = recommended.includes(tpl.id);
+                  return (
+                    <button
+                      key={tpl.id}
+                      onClick={() => setPayload((p) => ({
+                        ...p,
+                        templateId:   tpl.id,
+                        colorPrimary: tpl.colorPrimary,
+                        colorAccent:  tpl.colorAccent,
+                        textColor:    tpl.textColor,
+                        bgColor:      tpl.bgColor,
+                        style:        tpl.style,
+                        bgm:          tpl.bgm,
+                      }))}
+                      className={`relative rounded-xl p-2.5 text-left border-2 transition-all ${
+                        isSelected
+                          ? 'border-rose-400 bg-rose-50'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                      style={isSelected ? { borderColor: ACCENT } : {}}>
+                      {/* Color swatches */}
+                      <div className="flex gap-1 mb-1.5">
+                        <div className="w-5 h-5 rounded-full border border-white/50 shadow-sm flex-shrink-0"
+                          style={{ backgroundColor: tpl.colorPrimary }} />
+                        <div className="w-5 h-5 rounded-full border border-white/50 shadow-sm flex-shrink-0"
+                          style={{ backgroundColor: tpl.colorAccent }} />
+                        {isRecommended && (
+                          <span className="ml-auto text-[8px] font-bold px-1 rounded"
+                            style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}>
+                            ★
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] font-black text-slate-800 leading-none">{tpl.name}</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">{tpl.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* カラー調整（折りたたみ） */}
+          <button
+            onClick={() => setShowColor((v) => !v)}
+            className="w-full flex items-center justify-between mt-2.5 pt-2.5 border-t border-slate-100 text-[11px] font-bold text-slate-400 hover:text-slate-600">
+            カラー微調整
+            {showColorOverride ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+          {showColorOverride && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1">メイン</label>
+                <input type="color" value={editingPayload.colorPrimary || '#1A1A2E'}
+                  onChange={(e) => setPayload((p) => ({ ...p, colorPrimary: e.target.value }))}
+                  className="w-full h-7 border border-slate-200 rounded cursor-pointer" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1">アクセント</label>
+                <input type="color" value={editingPayload.colorAccent || '#E95464'}
+                  onChange={(e) => setPayload((p) => ({ ...p, colorAccent: e.target.value }))}
+                  className="w-full h-7 border border-slate-200 rounded cursor-pointer" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1">テキスト</label>
+                <input type="color" value={editingPayload.textColor || '#ffffff'}
+                  onChange={(e) => setPayload((p) => ({ ...p, textColor: e.target.value }))}
+                  className="w-full h-7 border border-slate-200 rounded cursor-pointer" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1">背景色</label>
+                <input type="color" value={editingPayload.bgColor || '#F8F9FA'}
+                  onChange={(e) => setPayload((p) => ({ ...p, bgColor: e.target.value }))}
+                  className="w-full h-7 border border-slate-200 rounded cursor-pointer" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-slate-400 mb-1">BGM</label>
+                <select value={editingPayload.bgm || 'cool_minimal'}
+                  onChange={(e) => setPayload((p) => ({ ...p, bgm: e.target.value }))}
+                  className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs outline-none bg-white">
+                  {BGM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Operations */}

@@ -29,6 +29,8 @@ export type PalVideoPayload = {
   bgm?: string;
   /** テンプレートスタイル: 'standard' | 'magazine' | 'minimal' | 'collage' | 'gradient' */
   style?: 'standard' | 'magazine' | 'minimal' | 'collage' | 'gradient';
+  /** pal_studio 連携テンプレートID */
+  templateId?: string;
   /** collageスタイル用: 背景色 (default: #FAF8F5) */
   bgColor?: string;
   /** collageスタイル用: テキスト色 (default: #1C1C1C) */

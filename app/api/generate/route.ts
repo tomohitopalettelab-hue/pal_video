@@ -7,6 +7,8 @@ type GenerateBody = {
   jobId?: string;
   purpose: string;
   destination?: string;
+  templateId?: string;
+  templateName?: string;
   hearingData?: Record<string, unknown>;
   hearingAnswers?: Array<{ q: string; a: string }>;
   hearingMessages?: Array<{ role: string; content: string }>;
@@ -167,7 +169,7 @@ Respond ONLY with valid JSON. No markdown, no explanation, no code fences.
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as GenerateBody;
-    const { paletteId, purpose, destination, jobId } = body;
+    const { paletteId, purpose, destination, jobId, templateId, templateName } = body;
 
     if (!paletteId || !purpose) {
       return NextResponse.json({ success: false, error: 'paletteId と purpose は必須です。' }, { status: 400 });
@@ -231,15 +233,34 @@ export async function POST(req: Request) {
       return parts.length > 0 ? parts.join('\n\n') : 'ヒアリングデータ: なし';
     })();
 
+    // Template aesthetic guidance
+    const TEMPLATE_AESTHETIC: Record<string, string> = {
+      modern:    'シンプル＆クリーン。余白を活かし、洗練されたモダンなレイアウト。読みやすいフォントサイズ。color-wipe/slideを多用。',
+      elegant:   'ラグジュアリー。暗いトーン、ゴールドアクセント、マガジンスタイルのレイアウト。flipやfilm-rollで高級感。',
+      corporate: '信頼と実績。ネイビー系、billboardとcaptionを使った力強い見出し構成。professional tone。',
+      pop:       '元気で親しみやすい。鮮やかな色使い、bounce/elastic、gradient全面カットを積極的に使う。',
+      minimal:   '洗練された余白。テキスト中心、白い背景、静かなアニメーション。fadeやslideのみ。',
+      dark:      'テック＆クール。暗い背景にブルーアクセント。spin/flipで動的に。gradient fullbleedを多用。',
+      natural:   'オーガニック＆温かい。アースカラー、自然の写真、ゆっくりしたアニメーション。natural_warm BGM。',
+      japanese:  '和の伝統。藍色・朱色。縦書き風テキスト（\n改行活用）、余白重視、film-roll/fadeで品格。',
+      portfolio: '作品・事例重視。画像を大きく見せる。collageスタイル推奨。テキストは最小限。',
+      lp:        'コンバージョン特化。CTAが明確、billboardでインパクト、最後のカットに強いCTA。color-wipeで引き付ける。',
+    };
+    const templateAesthetic = templateId ? (TEMPLATE_AESTHETIC[templateId] || '') : '';
+    const templateSection = templateId
+      ? `\nテンプレート: ${templateName || templateId}\n美学・スタイル: ${templateAesthetic}`
+      : '';
+
     const userPrompt = [
       `用途: ${purposeLabel}`,
       destinationLabel ? `投稿先: ${destinationLabel}` : '',
       `顧客ID: ${paletteId}`,
+      templateSection,
       hearingContext,
       body.existingCuts && body.existingCuts.length > 0
         ? `既存カット数: ${body.existingCuts.length}`
         : '',
-      '上記のヒアリング内容を深く読み込み、そのビジネス・ブランドに最適な動画カットを生成してください。',
+      '上記のヒアリング内容とテンプレートの美学を深く読み込み、そのビジネス・ブランドに最適な動画カットを生成してください。',
     ]
       .filter(Boolean)
       .join('\n\n');
