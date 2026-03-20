@@ -667,34 +667,49 @@ export default function AdminPage() {
         setOpMessage('🎬 レンダリング開始...');
         setRenderProgress({ current: 0, total: 1, label: '準備中...' });
         const jobIdToPoll = selectedJobId;
+        // preview: 10分, final: 120分
+        const maxPollMs = mode === 'preview' ? 600000 : 7200000;
+        const staleMs   = mode === 'preview' ? 120000  : 600000; // 進捗なし許容時間
+        let lastProgressLabel = '';
+        let lastProgressAt = Date.now();
         const poll = setInterval(async () => {
           try {
             const jobRes  = await fetch(`/api/admin/job?id=${encodeURIComponent(jobIdToPoll)}`);
             const jobBody = await jobRes.json().catch(() => ({}));
-            const job     = jobBody?.job;
-            const prog    = job?.payload?.renderProgress;
-            if (prog) setRenderProgress({ current: prog.current, total: prog.total, label: prog.label });
+            const job     = jobBody?.job as { status?: string; previewUrl?: string | null; payload?: Record<string, unknown> } | undefined;
+            const prog    = job?.payload?.['renderProgress'] as { current: number; total: number; label: string } | undefined;
+            if (prog) {
+              setRenderProgress({ current: prog.current, total: prog.total, label: prog.label });
+              if (prog.label !== lastProgressLabel) { lastProgressLabel = prog.label; lastProgressAt = Date.now(); }
+            }
             if (job?.previewUrl) {
               clearInterval(poll);
-              setPreviewUrl(job.previewUrl);
+              setPreviewUrl(job.previewUrl as string);
               setRenderProgress(null);
               setOpMessage('✅ レンダリング完了！');
               setTimeout(() => setOpMessage(''), 5000);
               setIsRendering(false);
-            } else if (job?.status === 'エラー') {
+            } else if (String(job?.status) === 'エラー') {
               clearInterval(poll);
               setRenderProgress(null);
-              setOpMessage(`⚠️ レンダリングエラー: ${job.payload?.renderError || '不明なエラー'}`);
+              const errMsg = (job?.payload?.['renderError'] as string) || '不明なエラー';
+              setOpMessage(`⚠️ レンダリングエラー: ${errMsg}`);
+              setIsRendering(false);
+            } else if (Date.now() - lastProgressAt > staleMs) {
+              // 進捗が staleMs 以上変化なし → スタックとみなす
+              clearInterval(poll);
+              setRenderProgress(null);
+              setOpMessage('⚠️ レンダリングが停止しました。再度お試しください。');
               setIsRendering(false);
             }
           } catch { /* ポーリング中の一時エラーは無視 */ }
         }, 4000);
-        // 15分でタイムアウト
+        // maxPollMs でタイムアウト
         setTimeout(() => {
           clearInterval(poll);
           setRenderProgress(null);
           setOpMessage('⚠️ タイムアウト。ページを更新して確認してください。'); setIsRendering(false);
-        }, 900000);
+        }, maxPollMs);
       } else {
         setOpMessage(body?.error || 'レンダリングに失敗しました。');
         setIsRendering(false);
