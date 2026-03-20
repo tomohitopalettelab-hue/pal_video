@@ -663,7 +663,7 @@ export default function AdminPage() {
         setIsRendering(false);
       } else if (body?.status === 'rendering') {
         // FFmpeg バックグラウンドレンダー → ポーリング
-        setOpMessage('🎬 FFmpegでレンダリング中... 1〜3分かかります');
+        setOpMessage('🎬 FFmpegでレンダリング中... Ken Burns処理のため5〜10分かかります');
         const jobIdToPoll = selectedJobId;
         const poll = setInterval(async () => {
           try {
@@ -683,11 +683,11 @@ export default function AdminPage() {
             }
           } catch { /* ポーリング中の一時エラーは無視 */ }
         }, 4000);
-        // 5分でタイムアウト
+        // 15分でタイムアウト（Ken Burns含む高品質レンダリングは最大10分）
         setTimeout(() => {
           clearInterval(poll);
-          if (isRendering) { setOpMessage('⚠️ タイムアウト。後でページを更新して確認してください。'); setIsRendering(false); }
-        }, 300000);
+          setOpMessage('⚠️ タイムアウト。ページを更新して確認してください。'); setIsRendering(false);
+        }, 900000);
       } else {
         setOpMessage(body?.error || 'レンダリングに失敗しました。');
         setIsRendering(false);
