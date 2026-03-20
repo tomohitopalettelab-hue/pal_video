@@ -32,8 +32,8 @@ export async function POST(req: Request) {
       payload: job.payload,
     };
 
-    // ポーリング待機を含むため120秒に設定
-    const renderRes = await palDbPost(endpoint, renderPayload, { timeoutMs: 120000 });
+    // FFmpeg レンダリングは 7 カットで最大 3 分かかるため 300 秒に設定
+    const renderRes = await palDbPost(endpoint, renderPayload, { timeoutMs: 300000 });
     const renderBody = await renderRes.json().catch(() => ({}));
 
     if (!renderRes.ok) {
