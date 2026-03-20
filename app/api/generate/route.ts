@@ -131,6 +131,14 @@ Deeply analyze the hearing Q&A and conversation to extract:
 - Wedding/Event: cream white (#FAF8F5), accent: #C4973A (gold), style: minimal, bgm: cinematic
 - Recruitment/HR: fresh green (#2D9E5A), accent: #E95464, bgm: bright_pop
 
+## Collage Style Special Rules (when style === "collage")
+- Generate only 2-4 cuts (fewer but more impactful)
+- Each cut represents a "theme" or "aspect" of the business (e.g., workplace culture, products, team, environment)
+- imageKeyword must describe scenes with different angles/subjects so 4 fetched images look like a varied photoshoot
+- mainText: larger, bolder statement (1-2 short lines max), often a recruitment or event headline
+- layout: always "center" for collage cuts (text appears in center band between photo rows)
+- transition: "fade" or "slide" (keep it clean/elegant for collage style)
+
 ## Response Format
 Respond ONLY with valid JSON. No markdown, no explanation, no code fences.
 {
@@ -242,8 +250,8 @@ export async function POST(req: Request) {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.8,
-      max_tokens: 2000,
+      temperature: 0.85,
+      max_tokens: 3000,
       response_format: { type: 'json_object' },
     });
 
