@@ -1,15 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   LogOut, Plus, X, Copy, ExternalLink, Download, Youtube, Link2, Loader2,
   MessageCircle, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import type { PalVideoJob, PalVideoCut, PalVideoPayload } from '../api/_lib/pal-video-store';
+import type { VideoTemplate } from '../api/_lib/templates';
+import { TEMPLATES, PLATFORM_LABELS, PURPOSE_LABELS, DURATION_LABELS } from '../api/_lib/templates';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const ACCENT = '#E95464';
+
+const BGM_PREVIEW_URLS: Record<string, string> = {
+  bright_pop:   'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+  cool_minimal: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3',
+  cinematic:    'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
+  natural_warm: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+};
+
+const BGM_LABELS: Record<string, string> = {
+  bright_pop:   '明るい・ポップ',
+  cool_minimal: 'クール・ミニマル',
+  cinematic:    '感動・シネマ',
+  natural_warm: 'ナチュラル・ほのぼの',
+};
 
 // ── 10 Template Presets (pal_studio 連携) ────────────────────────────────────
 type TemplatePreset = {
@@ -446,6 +462,15 @@ export default function AdminPage() {
   const [showColorOverride, setShowColor]     = useState(false);
   const [opMessage, setOpMessage]             = useState('');
 
+  // State: template gallery
+  const [tmplPlatform, setTmplPlatform]     = useState<string>('');
+  const [tmplDuration, setTmplDuration]     = useState<number>(0);
+  const [tmplPurpose, setTmplPurpose]       = useState<string>('');
+  const [tmplFamily, setTmplFamily]         = useState<string>('');
+  const [selectedTmplId, setSelectedTmpl]   = useState<string>('');
+  const [bgmPlaying, setBgmPlaying]         = useState(false);
+  const bgmAudioRef = useRef<HTMLAudioElement | null>(null);
+
   // Derived
   const selectedCustomer = customers.find((c) => c.paletteId === selectedCustomerId) || null;
   const selectedJob      = jobs.find((j) => j.id === selectedJobId) || null;
@@ -508,6 +533,64 @@ export default function AdminPage() {
     if (cuts.length > 0) setSelectedCutId(cuts[0].id);
     else setSelectedCutId(null);
   };
+
+  // ── Apply template ────────────────────────────────────────────────────────
+  const handleApplyTemplate = (tmpl: VideoTemplate) => {
+    setSelectedTmpl(tmpl.id);
+    const totalDur = tmpl.duration;
+    const newCuts = tmpl.cuts.map((tc, i) => ({
+      id: `cut_${Date.now()}_${i}`,
+      duration: Math.round(totalDur * tc.durationRatio),
+      imageUrl: (editingPayload.cuts || [])[i]?.imageUrl || null,
+      mainText: (editingPayload.cuts || [])[i]?.mainText || tc.mainTextPlaceholder,
+      subText:  (editingPayload.cuts || [])[i]?.subText  || tc.subTextPlaceholder,
+      layout:   tc.layout,
+      transition: tc.transition,
+      animation:  tc.animation,
+    }));
+    setPayload((prev) => ({
+      ...prev,
+      colorPrimary: tmpl.colorPrimary,
+      colorAccent:  tmpl.colorAccent,
+      style:        tmpl.style,
+      bgm:          tmpl.bgm,
+      duration:     tmpl.duration,
+      destination:  tmpl.platform,
+      purpose:      tmpl.purpose,
+      cuts:         newCuts,
+    }));
+    if (newCuts.length > 0) setSelectedCutId(newCuts[0].id);
+    setOpMessage(`テンプレート「${tmpl.name}」を適用しました`);
+    setTimeout(() => setOpMessage(''), 3000);
+  };
+
+  const handleBgmToggle = () => {
+    const url = BGM_PREVIEW_URLS[editingPayload.bgm || ''];
+    if (!url) return;
+    if (!bgmAudioRef.current) {
+      bgmAudioRef.current = new Audio(url);
+      bgmAudioRef.current.loop = true;
+    }
+    if (bgmPlaying) {
+      bgmAudioRef.current.pause();
+      setBgmPlaying(false);
+    } else {
+      if (bgmAudioRef.current.src !== url) {
+        bgmAudioRef.current.src = url;
+      }
+      bgmAudioRef.current.play().catch(() => {});
+      setBgmPlaying(true);
+    }
+  };
+
+  // Stop BGM when bgm setting changes
+  useEffect(() => {
+    if (bgmAudioRef.current) {
+      bgmAudioRef.current.pause();
+      bgmAudioRef.current = null;
+      setBgmPlaying(false);
+    }
+  }, [editingPayload.bgm]);
 
   // ── Create new job ────────────────────────────────────────────────────────
 
@@ -876,6 +959,110 @@ export default function AdminPage() {
               </div>
             ) : selectedJob ? (
               <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+
+                {/* ── Template Gallery ──────────────────────────────────────── */}
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-bold text-slate-500 uppercase flex-shrink-0">テンプレート</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <select value={tmplPlatform} onChange={e => setTmplPlatform(e.target.value)}
+                        className="text-[10px] border border-slate-200 rounded px-1.5 py-0.5 bg-white text-slate-600">
+                        <option value="">全プラットフォーム</option>
+                        {(['instagram_reel','instagram_story','instagram_feed','tiktok','youtube_short','youtube','x_twitter','line_voom','facebook','web_banner'] as const).map(p => (
+                          <option key={p} value={p}>{PLATFORM_LABELS[p]}</option>
+                        ))}
+                      </select>
+                      <select value={tmplDuration} onChange={e => setTmplDuration(Number(e.target.value))}
+                        className="text-[10px] border border-slate-200 rounded px-1.5 py-0.5 bg-white text-slate-600">
+                        <option value={0}>全尺</option>
+                        <option value={15}>15秒</option>
+                        <option value={30}>30秒</option>
+                        <option value={60}>60秒</option>
+                      </select>
+                      <select value={tmplPurpose} onChange={e => setTmplPurpose(e.target.value)}
+                        className="text-[10px] border border-slate-200 rounded px-1.5 py-0.5 bg-white text-slate-600">
+                        <option value="">全用途</option>
+                        {(['promotion','sns_post','sns_ad','review','achievement'] as const).map(p => (
+                          <option key={p} value={p}>{PURPOSE_LABELS[p]}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar p-3">
+                    {TEMPLATES.filter(t =>
+                      (!tmplPlatform || t.platform === tmplPlatform) &&
+                      (!tmplDuration || t.duration === tmplDuration) &&
+                      (!tmplPurpose  || t.purpose  === tmplPurpose)
+                    ).slice(0, 40).map((tmpl) => (
+                      <button key={tmpl.id}
+                        onClick={() => handleApplyTemplate(tmpl)}
+                        className={`flex-shrink-0 w-28 rounded-xl overflow-hidden border-2 transition-all text-left ${
+                          selectedTmplId === tmpl.id
+                            ? 'border-rose-400 shadow-md scale-105'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        style={selectedTmplId === tmpl.id ? { borderColor: ACCENT } : {}}>
+                        {/* Thumbnail */}
+                        <div className="h-20 relative flex items-center justify-center"
+                          style={{ background: tmpl.thumbnailGradient }}>
+                          {/* Layout diagram */}
+                          <div className="absolute inset-x-2 bottom-2 space-y-0.5">
+                            {tmpl.cuts.slice(0, 3).map((c, i) => (
+                              <div key={i} className={`h-1 rounded-full bg-white/60 ${
+                                c.layout === 'top' ? 'w-3/4' : c.layout === 'center' ? 'w-1/2 mx-auto' : 'w-full'
+                              }`} />
+                            ))}
+                          </div>
+                          <div className="absolute top-1.5 right-1.5">
+                            <span className="text-[8px] bg-black/40 text-white px-1 py-0.5 rounded">
+                              {DURATION_LABELS[tmpl.duration]}
+                            </span>
+                          </div>
+                          <div className="absolute top-1.5 left-1.5">
+                            <span className="text-[8px] bg-black/40 text-white px-1 py-0.5 rounded">
+                              {tmpl.cuts.length}カット
+                            </span>
+                          </div>
+                        </div>
+                        {/* Info */}
+                        <div className="p-1.5 bg-white">
+                          <p className="text-[9px] font-bold text-slate-700 truncate">{tmpl.family}</p>
+                          <p className="text-[8px] text-slate-400 truncate">{PURPOSE_LABELS[tmpl.purpose]}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* BGM Player */}
+                  <div className="border-t border-slate-100 px-4 py-2.5 flex items-center gap-3">
+                    <span className="text-[10px] font-bold text-slate-500 flex-shrink-0">🎵 BGM</span>
+                    <select
+                      value={editingPayload.bgm || ''}
+                      onChange={(e) => {
+                        setPayload((prev) => ({ ...prev, bgm: e.target.value }));
+                        if (bgmAudioRef.current) {
+                          bgmAudioRef.current.pause();
+                          bgmAudioRef.current = null;
+                          setBgmPlaying(false);
+                        }
+                      }}
+                      className="flex-1 text-[11px] border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 outline-none">
+                      <option value="">BGMなし</option>
+                      {Object.entries(BGM_LABELS).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleBgmToggle}
+                      disabled={!editingPayload.bgm}
+                      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm transition-colors ${
+                        bgmPlaying ? 'bg-rose-500' : editingPayload.bgm ? 'bg-slate-600 hover:bg-slate-800' : 'bg-slate-200'
+                      }`}
+                      title={bgmPlaying ? '停止' : '試聴'}>
+                      {bgmPlaying ? '⏸' : '▶'}
+                    </button>
+                  </div>
+                </div>
 
                 {/* Cut Timeline */}
                 <div>
