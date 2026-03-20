@@ -157,7 +157,7 @@ function JobCard({ job }: { job: PalVideoJob }) {
           {job.previewUrl ? (
             <>
               <a
-                href={job.previewUrl}
+                href={`/preview/${job.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 py-1.5 rounded-lg text-white text-xs font-bold flex items-center justify-center gap-1"

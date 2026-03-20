@@ -1077,19 +1077,27 @@ export default function AdminPage() {
             <p className="text-xs text-center font-medium" style={{ color: ACCENT }}>{opMessage}</p>
           )}
 
-          {previewUrl && (
+          {previewUrl && selectedJobId && (
             <div className="pt-2 space-y-2">
+              {/* お客様確認URL */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => { navigator.clipboard.writeText(previewUrl); setOpMessage('URLをコピーしました'); setTimeout(() => setOpMessage(''), 3000); }}
-                  className="flex-1 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1">
-                  <Copy size={12} /> URLをコピー
+                  onClick={() => {
+                    const url = `${window.location.origin}/preview/${selectedJobId}`;
+                    navigator.clipboard.writeText(url);
+                    setOpMessage('お客様確認URLをコピーしました');
+                    setTimeout(() => setOpMessage(''), 3000);
+                  }}
+                  className="flex-1 py-1.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1"
+                  style={{ borderColor: ACCENT, color: ACCENT }}>
+                  <Copy size={12} /> お客様確認URLをコピー
                 </button>
-                <a href={previewUrl} target="_blank" rel="noopener noreferrer"
+                <a href={`/preview/${selectedJobId}`} target="_blank" rel="noopener noreferrer"
                   className="p-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">
                   <ExternalLink size={14} />
                 </a>
               </div>
+              {/* MP4ダウンロード */}
               <a href={previewUrl} download
                 className="w-full py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1">
                 <Download size={12} /> MP4ダウンロード
