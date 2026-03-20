@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getJobById, updateJob } from '../_lib/pal-video-store';
-import { palDbPost } from '../_lib/pal-db-client';
+import { palDbPost, palDbGet } from '../_lib/pal-db-client';
 
 type RenderBody = {
   jobId: string;
@@ -45,6 +45,26 @@ export async function POST(req: Request) {
 
     // バックグラウンドレンダー開始 → ポーリングで完了を検知
     if (renderBody?.status === 'rendering') {
+      // pal_db が Render.com でスリープしないよう、バックグラウンドで keep-alive ピングを送る
+      // レンダリング中（最大120分）、45秒ごとにヘルスチェックして接続を維持
+      void (async () => {
+        const pingIntervalMs = 45_000;
+        const maxPingMs      = 120 * 60 * 1000;
+        const started        = Date.now();
+        while (Date.now() - started < maxPingMs) {
+          await new Promise((r) => setTimeout(r, pingIntervalMs));
+          try {
+            // ジョブのステータスを確認（同時にサーバーをウォームに保つ）
+            const check = await palDbGet(`/api/pal-video/jobs/${encodeURIComponent(jobId)}`);
+            if (check.ok) {
+              const body = await check.json().catch(() => ({})) as { job?: { status?: string } };
+              const st = body?.job?.status;
+              // 完了またはエラーならピング終了
+              if (st && !['レンダリング中', 'rendering'].includes(st)) break;
+            }
+          } catch { /* ピング失敗は無視 */ }
+        }
+      })();
       return NextResponse.json({ success: true, status: 'rendering', jobId });
     }
 

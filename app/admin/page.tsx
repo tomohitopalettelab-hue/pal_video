@@ -989,7 +989,7 @@ export default function AdminPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  const handleRender = async (mode: 'preview' | 'final') => {
+  const handleRender = async (mode: 'preview' | 'final', _retryCount = 0) => {
     if (!selectedJobId) { setOpMessage('先に保存してください。'); return; }
     setIsRendering(true);
     setOpMessage(mode === 'preview' ? 'プレビューを生成中（バックグラウンド）...' : '最終レンダリング中（バックグラウンド）...');
@@ -1040,12 +1040,25 @@ export default function AdminPage() {
               const errMsg = (job?.payload?.['renderError'] as string) || '不明なエラー';
               setOpMessage(`⚠️ レンダリングエラー: ${errMsg}`);
               setIsRendering(false);
+            } else if (String(job?.status) === 'draft' && _retryCount < 2) {
+              // サーバー再起動でジョブが draft に戻った → 自動リトライ
+              clearInterval(poll);
+              setRenderProgress(null);
+              const retryNum = _retryCount + 1;
+              setOpMessage(`🔄 サーバーが再起動しました。自動リトライ中... (${retryNum}/2)`);
+              setTimeout(() => handleRender(mode, retryNum), 3000);
             } else if (Date.now() - lastProgressAt > staleMs) {
               // 進捗が staleMs 以上変化なし → スタックとみなす
               clearInterval(poll);
               setRenderProgress(null);
-              setOpMessage('⚠️ レンダリングが停止しました。再度お試しください。');
-              setIsRendering(false);
+              if (_retryCount < 2) {
+                const retryNum = _retryCount + 1;
+                setOpMessage(`🔄 レンダリングが停止しました。自動リトライ中... (${retryNum}/2)`);
+                setTimeout(() => handleRender(mode, retryNum), 5000);
+              } else {
+                setOpMessage('⚠️ レンダリングが停止しました。再度お試しください。');
+                setIsRendering(false);
+              }
             }
           } catch { /* ポーリング中の一時エラーは無視 */ }
         }, 4000);
