@@ -16,28 +16,41 @@ type GenerateBody = {
 // ── Pexels image search ──────────────────────────────────────────────────────
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY || '';
 
-async function searchPexelsImage(
+async function searchPexelsImages(
   keyword: string,
   orientation: 'portrait' | 'landscape' | 'square' = 'portrait',
-): Promise<string | null> {
-  if (!PEXELS_API_KEY) return null;
+  count = 1,
+): Promise<string[]> {
+  if (!PEXELS_API_KEY) return [];
   try {
-    const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(keyword)}&per_page=5&orientation=${orientation}`;
+    const perPage = Math.min(count + 4, 15); // fetch a few extras for variety
+    const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(keyword)}&per_page=${perPage}&orientation=${orientation}`;
     const res = await fetch(url, {
       headers: { Authorization: PEXELS_API_KEY },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(6000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data = (await res.json()) as {
       photos?: Array<{ src: { large2x?: string; large?: string; original?: string } }>;
     };
     const photos = data?.photos || [];
-    if (photos.length === 0) return null;
-    const pick = photos[Math.floor(Math.random() * Math.min(photos.length, 5))];
-    return pick?.src?.large2x || pick?.src?.large || pick?.src?.original || null;
+    if (photos.length === 0) return [];
+    // Shuffle and pick `count` distinct photos
+    const shuffled = [...photos].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count)
+      .map((p) => p?.src?.large2x || p?.src?.large || p?.src?.original || '')
+      .filter(Boolean);
   } catch {
-    return null;
+    return [];
   }
+}
+
+async function searchPexelsImage(
+  keyword: string,
+  orientation: 'portrait' | 'landscape' | 'square' = 'portrait',
+): Promise<string | null> {
+  const results = await searchPexelsImages(keyword, orientation, 1);
+  return results[0] ?? null;
 }
 
 // ── AI system prompt ─────────────────────────────────────────────────────────
@@ -50,7 +63,7 @@ Generate a sequence of high-impact video cuts for a professional marketing video
 - duration: 2.5–4.5 seconds. First and last cuts: 3.5–5 seconds.
 - mainText: punchy Japanese marketing headline. MAX 12 chars. Use line breaks (\n) for rhythm. Make it memorable, poetic, or provocative.
 - subText: supporting Japanese detail. MAX 22 chars. Concrete specifics beat vague claims.
-- imageKeyword: 5-8 specific English words for Pexels stock photo search. Be VERY specific about subject, lighting, mood, and setting (e.g., "japanese cafe barista morning golden light bokeh" not just "cafe"). This is critical for image quality.
+- imageKeyword: 5-8 specific English words for Pexels stock photo search. Be VERY specific about subject, lighting, mood, and setting (e.g., "japanese cafe barista morning golden light bokeh" not just "cafe"). This is critical for image quality. For collage style, make each cut's imageKeyword describe a DIFFERENT scene/angle of the business.
 
 ## Transitions (vary HEAVILY, never repeat consecutive)
 - "color-wipe" → bold brand-color reveal (high energy)
@@ -257,11 +270,22 @@ export async function POST(req: Request) {
     };
     const orientation = orientationMap[destination || ''] || 'portrait';
 
+    // Determine if collage style (needs 4 images per cut)
+    const isCollageStyle = brandColors?.style === 'collage';
+
     // Parallel-fetch stock images via Pexels for each cut that has imageKeyword
     const cuts: PalVideoCut[] = await Promise.all(
       rawCuts.map(async (cut) => {
         const { imageKeyword, ...rest } = cut;
-        if (rest.imageUrl) return rest; // already has image
+        if (isCollageStyle) {
+          // Collage: fetch 4 images for 2×2 grid
+          if (rest.images && rest.images.length >= 2) return rest; // already has images
+          if (!imageKeyword) return rest;
+          const imgs = await searchPexelsImages(imageKeyword, orientation, 4);
+          return imgs.length > 0 ? { ...rest, images: imgs, imageUrl: imgs[0] } : rest;
+        }
+        // Non-collage: single image
+        if (rest.imageUrl) return rest;
         if (!imageKeyword) return rest;
         const imageUrl = await searchPexelsImage(imageKeyword, orientation);
         return imageUrl ? { ...rest, imageUrl } : rest;
