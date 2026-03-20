@@ -646,27 +646,58 @@ export default function AdminPage() {
   const handleRender = async (mode: 'preview' | 'final') => {
     if (!selectedJobId) { setOpMessage('先に保存してください。'); return; }
     setIsRendering(true);
-    setOpMessage(mode === 'preview' ? 'プレビューを生成中...' : '最終レンダリング中...');
+    setOpMessage(mode === 'preview' ? 'プレビューを生成中（バックグラウンド）...' : '最終レンダリング中（バックグラウンド）...');
     try {
-      // Auto-save first to include latest payload changes
       await handleSave();
       const res  = await fetch('/api/render', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId: selectedJobId, mode }),
       });
       const body = await res.json().catch(() => ({}));
+
       if (body?.url) {
+        // 即時返却（旧 Creatomate 互換）
         setPreviewUrl(body.url);
         setOpMessage(mode === 'preview' ? 'プレビューURLを取得しました。' : 'レンダリング完了！');
         setTimeout(() => setOpMessage(''), 5000);
+        setIsRendering(false);
+      } else if (body?.status === 'rendering') {
+        // FFmpeg バックグラウンドレンダー → ポーリング
+        setOpMessage('🎬 FFmpegでレンダリング中... 1〜3分かかります');
+        const jobIdToPoll = selectedJobId;
+        const poll = setInterval(async () => {
+          try {
+            const jobRes  = await fetch(`/api/admin/job?id=${encodeURIComponent(jobIdToPoll)}`);
+            const jobBody = await jobRes.json().catch(() => ({}));
+            const job     = jobBody?.job;
+            if (job?.previewUrl) {
+              clearInterval(poll);
+              setPreviewUrl(job.previewUrl);
+              setOpMessage('✅ レンダリング完了！');
+              setTimeout(() => setOpMessage(''), 5000);
+              setIsRendering(false);
+            } else if (job?.status === 'エラー') {
+              clearInterval(poll);
+              setOpMessage(`⚠️ レンダリングエラー: ${job.payload?.renderError || '不明なエラー'}`);
+              setIsRendering(false);
+            }
+          } catch { /* ポーリング中の一時エラーは無視 */ }
+        }, 4000);
+        // 5分でタイムアウト
+        setTimeout(() => {
+          clearInterval(poll);
+          if (isRendering) { setOpMessage('⚠️ タイムアウト。後でページを更新して確認してください。'); setIsRendering(false); }
+        }, 300000);
       } else {
         setOpMessage(body?.error || 'レンダリングに失敗しました。');
+        setIsRendering(false);
       }
     } catch (e: unknown) {
       if (!(e instanceof Error && e.message.includes('保存'))) {
         setOpMessage('レンダリングに失敗しました。');
       }
-    } finally  { setIsRendering(false); }
+      setIsRendering(false);
+    }
   };
 
   // ── Logout ────────────────────────────────────────────────────────────────

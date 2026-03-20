@@ -43,9 +43,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const url = renderBody?.url || renderBody?.previewUrl || renderBody?.renderUrl || null;
+    // バックグラウンドレンダー開始 → ポーリングで完了を検知
+    if (renderBody?.status === 'rendering') {
+      return NextResponse.json({ success: true, status: 'rendering', jobId });
+    }
 
-    // Update job with the returned URL
+    const url = renderBody?.url || renderBody?.previewUrl || renderBody?.renderUrl || null;
     if (url) {
       const updateData = mode === 'preview'
         ? { previewUrl: url, status: 'preview' as const }
