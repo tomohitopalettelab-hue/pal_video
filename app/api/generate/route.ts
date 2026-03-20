@@ -116,7 +116,7 @@ Deeply analyze the hearing Q&A and conversation to extract:
 - colorAccent: complementary/contrasting accent (creates visual pop)
 - textColor: "#ffffff" for dark backgrounds, "#1A1A1A" for light
 - bgColor: background color for minimal/collage styles
-- style: "standard" (photos + Ken Burns, most versatile) | "magazine" (side panel, luxury/B2B) | "minimal" (ultra-clean, beauty/fashion) | "collage" (grid layout, recruitment/events)
+- style: "standard" (photos + Ken Burns, most versatile) | "magazine" (side panel, luxury/B2B) | "minimal" (ultra-clean, beauty/fashion) | "collage" (grid layout, recruitment/events) | "gradient" (brand color full-bleed, no photos needed — great for announcements/launches)
 - bgm: "bright_pop" (energetic) | "cool_minimal" (stylish) | "cinematic" (emotional/premium) | "natural_warm" (friendly/casual)
 
 ## Industry Color Guide

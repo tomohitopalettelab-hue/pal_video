@@ -103,6 +103,7 @@ const STYLE_OPTIONS = [
   { value: 'magazine', label: 'マガジン（サイドパネル/高級感）' },
   { value: 'minimal',  label: 'ミニマル（白背景/余白重視）' },
   { value: 'collage',  label: 'コラージュ（白背景/ポラロイドグリッド）' },
+  { value: 'gradient', label: 'グラデーション（カラー全面/写真不要）' },
 ];
 
 const DEFAULT_PAYLOAD: PalVideoPayload = {
@@ -517,7 +518,7 @@ export default function AdminPage() {
           ...(bc?.colorAccent  ? { colorAccent:  bc.colorAccent  } : {}),
           ...(bc?.textColor    ? { textColor:    bc.textColor    } : {}),
           ...(bc?.bgColor      ? { bgColor:      bc.bgColor      } : {}),
-          ...(bc?.style        ? { style:        bc.style as 'standard'|'magazine'|'minimal'|'collage' } : {}),
+          ...(bc?.style        ? { style:        bc.style as 'standard'|'magazine'|'minimal'|'collage'|'gradient' } : {}),
           ...(bc?.bgm          ? { bgm:          bc.bgm          } : {}),
         }));
         if (body.cuts.length > 0) setSelectedCutId(body.cuts[0].id);
@@ -993,7 +994,7 @@ export default function AdminPage() {
             <div>
               <label className="block text-[11px] font-bold text-slate-500 mb-1">テンプレートスタイル</label>
               <select value={editingPayload.style || 'standard'}
-                onChange={(e) => setPayload((p) => ({ ...p, style: e.target.value as 'standard' | 'magazine' | 'minimal' | 'collage' }))}
+                onChange={(e) => setPayload((p) => ({ ...p, style: e.target.value as 'standard' | 'magazine' | 'minimal' | 'collage' | 'gradient' }))}
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none bg-white">
                 {STYLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
