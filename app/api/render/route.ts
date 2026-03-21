@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getJobById, updateJob } from '../_lib/pal-video-store';
-import { palDbPost, palDbGet } from '../_lib/pal-db-client';
+import { updateJob } from '../_lib/pal-video-store';
+import { palDbPost } from '../_lib/pal-db-client';
 
 export const maxDuration = 60;
 
@@ -18,24 +18,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'jobId は必須です。' }, { status: 400 });
     }
 
-    const job = await getJobById(jobId);
-    if (!job) {
-      return NextResponse.json({ success: false, error: 'ジョブが見つかりません。' }, { status: 404 });
-    }
-
     const endpoint = mode === 'preview'
       ? '/api/pal-video/generate'
       : '/api/pal-video/render';
 
-    const renderPayload = {
-      jobId: job.id,
-      paletteId: job.paletteId,
-      planCode: job.planCode,
-      payload: job.payload,
-    };
-
-    // FFmpeg レンダリングは 7 カットで最大 3 分かかるため 300 秒に設定
-    const renderRes = await palDbPost(endpoint, renderPayload, { timeoutMs: 300000 });
+    // pal_db 側でジョブを DB から取得してレンダリングするため、jobId だけ渡せば十分
+    // （pal_db の render/generate エンドポイントが getPalVideoJob(jobId) で自前で取得する）
+    const renderRes = await palDbPost(endpoint, { jobId }, { timeoutMs: 300000 });
     const renderBody = await renderRes.json().catch(() => ({}));
 
     if (!renderRes.ok) {
@@ -45,31 +34,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // バックグラウンドレンダー開始 → ポーリングで完了を検知
+    // バックグラウンドレンダー開始 → フロントがポーリングで完了を検知する
+    // ポーリング（4秒ごと）が pal_db へ HTTP リクエストを送り続けるため
+    // pal_db は Render.com のスリープ判定に引っかからずウォーム状態を維持できる
     if (renderBody?.status === 'rendering') {
-      // pal_db が Render.com でスリープしないよう、バックグラウンドで keep-alive ピングを送る
-      // レンダリング中（最大120分）、45秒ごとにヘルスチェックして接続を維持
-      void (async () => {
-        const pingIntervalMs = 45_000;
-        const maxPingMs      = 120 * 60 * 1000;
-        const started        = Date.now();
-        while (Date.now() - started < maxPingMs) {
-          await new Promise((r) => setTimeout(r, pingIntervalMs));
-          try {
-            // ジョブのステータスを確認（同時にサーバーをウォームに保つ）
-            const check = await palDbGet(`/api/pal-video/jobs/${encodeURIComponent(jobId)}`);
-            if (check.ok) {
-              const body = await check.json().catch(() => ({})) as { job?: { status?: string } };
-              const st = body?.job?.status;
-              // 完了またはエラーならピング終了
-              if (st && !['レンダリング中', 'rendering'].includes(st)) break;
-            }
-          } catch { /* ピング失敗は無視 */ }
-        }
-      })();
       return NextResponse.json({ success: true, status: 'rendering', jobId });
     }
 
+    // Creatomate などの同期レンダー（URL が即時返却される場合）
     const url = renderBody?.url || renderBody?.previewUrl || renderBody?.renderUrl || null;
     if (url) {
       const updateData = mode === 'preview'
@@ -78,11 +50,7 @@ export async function POST(req: Request) {
       await updateJob(jobId, updateData);
     }
 
-    return NextResponse.json({
-      success: true,
-      url,
-      job: { ...job, previewUrl: url || job.previewUrl },
-    });
+    return NextResponse.json({ success: true, url });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'レンダリングに失敗しました。';
     return NextResponse.json({ success: false, error: message }, { status: 500 });

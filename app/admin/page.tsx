@@ -542,6 +542,7 @@ export default function AdminPage() {
   const [isRendering, setIsRendering]         = useState(false);
   const [isSaving, setIsSaving]               = useState(false);
   const [previewUrl, setPreviewUrl]           = useState<string | null>(null);
+  const [videoError, setVideoError]           = useState(false);
   const [renderProgress, setRenderProgress]   = useState<{ current: number; total: number; label: string } | null>(null);
 
   // State: UI
@@ -617,6 +618,7 @@ export default function AdminPage() {
     setSelectedJobId(job.id);
     setPayload(mergePayload(DEFAULT_PAYLOAD, job.payload));
     setPreviewUrl(job.previewUrl || null);
+    setVideoError(false);
     const cuts = job.payload?.cuts || [];
     if (cuts.length > 0) setSelectedCutId(cuts[0].id);
     else setSelectedCutId(null);
@@ -833,6 +835,8 @@ export default function AdminPage() {
   const handleRender = async (mode: 'preview' | 'final', _retryCount = 0) => {
     if (!selectedJobId) { setOpMessage('先に保存してください。'); return; }
     setIsRendering(true);
+    setVideoError(false);
+    setPreviewUrl(null); // 旧 URL をクリア（サーバー再起動後の stale 404 を防ぐ）
     setOpMessage(mode === 'preview' ? 'プレビューを生成中...' : '最終レンダリング中...');
     try {
       // リトライ時は handleSave をスキップ:
@@ -846,6 +850,7 @@ export default function AdminPage() {
       const body = await res.json().catch(() => ({}));
 
       if (body?.url) {
+        setVideoError(false);
         setPreviewUrl(body.url);
         setOpMessage(mode === 'preview' ? 'プレビューURLを取得しました。' : 'レンダリング完了！');
         setTimeout(() => setOpMessage(''), 5000);
@@ -876,6 +881,7 @@ export default function AdminPage() {
             }
             if (job?.previewUrl) {
               clearInterval(poll);
+              setVideoError(false);
               setPreviewUrl(job.previewUrl as string);
               setRenderProgress(null);
               setOpMessage('✅ レンダリング完了！');
@@ -1629,17 +1635,30 @@ export default function AdminPage() {
                           <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">動画プレビュー</p>
                           {/* 生成済み動画をインライン表示 */}
                           <div className="rounded-xl overflow-hidden bg-black flex justify-center">
-                            <video
-                              key={previewUrl}
-                              src={previewUrl}
-                              controls
-                              autoPlay
-                              loop
-                              muted
-                              playsInline
-                              className="max-h-64 w-auto"
-                              style={{ maxWidth: '100%' }}
-                            />
+                            {videoError ? (
+                              <div className="flex flex-col items-center justify-center gap-2 py-8 px-4 text-center">
+                                <p className="text-sm text-slate-400">動画ファイルが見つかりません</p>
+                                <p className="text-xs text-slate-300">サーバー再起動により消去されました。再レンダリングしてください。</p>
+                                <button
+                                  onClick={() => { setVideoError(false); setPreviewUrl(null); }}
+                                  className="mt-2 px-3 py-1 text-xs rounded-lg border border-slate-300 text-slate-500 hover:bg-slate-50">
+                                  閉じる
+                                </button>
+                              </div>
+                            ) : (
+                              <video
+                                key={previewUrl}
+                                src={previewUrl}
+                                controls
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="max-h-64 w-auto"
+                                style={{ maxWidth: '100%' }}
+                                onError={() => setVideoError(true)}
+                              />
+                            )}
                           </div>
                           <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider pt-1">配布・公開</p>
                           <div className="flex items-center gap-2">
