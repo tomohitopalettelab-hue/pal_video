@@ -9,6 +9,7 @@ type GenerateBody = {
   jobId?: string;
   purpose: string;
   destination?: string;
+  duration?: number;
   templateId?: string;
   templateName?: string;
   hearingData?: Record<string, unknown>;
@@ -61,7 +62,7 @@ async function searchPexelsImage(
 const SYSTEM_PROMPT = `You are an award-winning video editor AI specializing in cinematic short-form social media content for Japanese businesses.
 Generate a sequence of high-impact video cuts for a professional marketing video.
 
-## Cut Rules
+## Cut Rules (default: 30s)
 - Generate 6-8 cuts. Never fewer than 6.
 - id: short alphanumeric like "c1", "c2", etc.
 - duration: 2.5–4.5 seconds. First and last cuts: 3.5–5 seconds.
@@ -171,7 +172,7 @@ Respond ONLY with valid JSON. No markdown, no explanation, no code fences.
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as GenerateBody;
-    const { paletteId, purpose, destination, jobId, templateId, templateName } = body;
+    const { paletteId, purpose, destination, duration, jobId, templateId, templateName } = body;
 
     if (!paletteId || !purpose) {
       return NextResponse.json({ success: false, error: 'paletteId と purpose は必須です。' }, { status: 400 });
@@ -253,11 +254,28 @@ export async function POST(req: Request) {
       ? `\nテンプレート: ${templateName || templateId}\n美学・スタイル: ${templateAesthetic}`
       : '';
 
+    // 60秒テンプレート: 20カット固定構成
+    // animation と duration は後処理で上書きするため AI は内容（テキスト・画像）に専念
+    const is60s = (duration || 0) >= 55;
+    const duration60sSection = is60s ? `
+【重要: 60秒プロモーションテンプレート】
+正確に20カットを生成すること（Cut Rules の 6-8 カットルールを上書き）。
+各カットには以下の「役割」に合わせて mainText・subText・imageKeyword を設定すること:
+カット01(導入)→02(問題提起)→03(解決策)→04(特徴1)→05(特徴1補足)→
+06(インパクト/短い単語)→07(特徴2)→08(特徴2補足/広い景観)→09(メリット1)→
+10(メリット2/変化)→11(リズムA/短いカット)→12(リズムB/短いカット)→
+13(信頼性/安定感)→14(利便性/日常シーン)→15(独自性/他との違い)→
+16(感情/喜び・ポジティブ)→17(まとめ/全体おさらい)→18(オファー/特典)→
+19(CTA/行動喚起)→20(エンド/ロゴ・URL)
+duration は AI が決めなくてよい（後で上書き）。animation も指定不要。` : '';
+
     const userPrompt = [
       `用途: ${purposeLabel}`,
       destinationLabel ? `投稿先: ${destinationLabel}` : '',
+      duration ? `尺: ${duration}秒` : '',
       `顧客ID: ${paletteId}`,
       templateSection,
+      duration60sSection,
       hearingContext,
       body.existingCuts && body.existingCuts.length > 0
         ? `既存カット数: ${body.existingCuts.length}`
@@ -322,6 +340,41 @@ export async function POST(req: Request) {
         return imageUrl ? { ...rest, imageUrl } : rest;
       }),
     );
+
+    // ─ 60秒テンプレート: animation・duration を固定値で上書き ─────────────
+    // AIが生成した内容（テキスト・画像）はそのまま使い、
+    // カメラワーク（animation）と秒数（duration）は設計書の値に統一する
+    if (is60s && cuts.length >= 10) {
+      const ANIMS_60S = [
+        'zoom_in_fast', 'pan_right',    'pan_left',      'pan_down',   'zoom_out',
+        'flash',        'diagonal_zoom','static',        'pan_left',   'pan_right',
+        'fast_zoom_in', 'fast_zoom_out','static',        'pan_up',     'diagonal_zoom',
+        'brightness',   'wide_view',    'blur',          'pan_left',   'fade_to_black',
+      ];
+      const DURS_60S = [
+        2.5, 3.0, 3.0, 2.5, 3.5,
+        2.0, 3.0, 3.0, 2.5, 4.0,
+        2.0, 2.0, 3.5, 3.0, 3.0,
+        2.5, 3.5, 3.0, 4.0, 3.5,
+      ];
+      cuts.forEach((cut, i) => {
+        if (i < ANIMS_60S.length) {
+          cut.animation = ANIMS_60S[i];
+          cut.duration  = DURS_60S[i];
+        }
+      });
+      // AI が 20 カット未満の場合は末尾を複製してパディング
+      while (cuts.length < 20) {
+        const src = cuts[cuts.length - 1];
+        const idx = cuts.length;
+        cuts.push({
+          ...src,
+          id:        `c${idx + 1}`,
+          animation: ANIMS_60S[idx] ?? 'static',
+          duration:  DURS_60S[idx]  ?? 3.0,
+        });
+      }
+    }
 
     return NextResponse.json({ success: true, cuts, brandColors: brandColors || null });
   } catch (error: unknown) {

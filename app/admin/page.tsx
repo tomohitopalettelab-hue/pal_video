@@ -796,6 +796,7 @@ export default function AdminPage() {
           jobId:           selectedJobId,
           purpose:         editingPayload.purpose      || 'promotion',
           destination:     editingPayload.destination  || 'instagram_reel',
+          duration:        editingPayload.duration,
           templateId:      editingPayload.templateId,
           templateName:    TEMPLATE_PRESETS.find((t) => t.id === editingPayload.templateId)?.name,
           hearingData:     editingPayload.hearingData,
