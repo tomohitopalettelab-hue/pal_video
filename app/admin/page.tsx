@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   LogOut, Plus, X, Copy, ExternalLink, Download, Youtube, Link2, Loader2,
-  MessageCircle, ChevronDown, ChevronUp,
+  MessageCircle, ChevronDown, ChevronUp, Upload,
 } from 'lucide-react';
 import type { PalVideoJob, PalVideoCut, PalVideoPayload } from '../api/_lib/pal-video-store';
 import type { VideoTemplate } from '../api/_lib/templates';
@@ -676,6 +676,25 @@ export default function AdminPage() {
     }
   }, [editingPayload.bgm]);
 
+  // ── Logo upload ───────────────────────────────────────────────────────────
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedCustomer) return;
+    e.target.value = '';
+    const form = new FormData();
+    form.append('file', file);
+    form.append('paletteId', selectedCustomer.paletteId);
+    try {
+      const res  = await fetch('/api/media', { method: 'POST', body: form });
+      const body = await res.json().catch(() => ({}));
+      const url  = body?.url || body?.file?.url || body?.data?.url;
+      if (url) setPayload((p) => ({ ...p, logoUrl: url }));
+    } catch (err) {
+      console.error('logo upload failed', err);
+    }
+  };
+
   // ── Create new job ────────────────────────────────────────────────────────
 
   const handleNewJob = async () => {
@@ -1221,6 +1240,35 @@ export default function AdminPage() {
                             );
                           })}
                         </div>
+                      </section>
+
+                      {/* ⑤ ロゴ */}
+                      <section>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2.5">
+                          <span className="inline-flex w-5 h-5 rounded-full text-white text-[9px] items-center justify-center mr-1.5" style={{ backgroundColor: ACCENT }}>5</span>
+                          ロゴ（任意）
+                        </p>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {editingPayload.logoUrl && (
+                            <>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={editingPayload.logoUrl} alt="logo" className="h-12 max-w-[120px] object-contain rounded-lg bg-slate-100 p-1 border border-slate-200" />
+                              <button
+                                onClick={() => setPayload((p) => ({ ...p, logoUrl: undefined }))}
+                                className="text-xs text-slate-400 hover:text-red-500 transition-colors">
+                                削除
+                              </button>
+                            </>
+                          )}
+                          <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors">
+                            <Upload size={12} />
+                            {editingPayload.logoUrl ? 'ロゴを変更' : 'ロゴをアップロード'}
+                            <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                          </label>
+                        </div>
+                        {editingPayload.logoUrl && (
+                          <p className="text-[10px] text-slate-400 mt-1.5">動画の右下に表示されます</p>
+                        )}
                       </section>
 
                       {/* プレビュー */}

@@ -31,6 +31,8 @@ export type PalVideoPayload = {
   style?: 'standard' | 'magazine' | 'minimal' | 'collage' | 'gradient';
   /** pal_studio 連携テンプレートID */
   templateId?: string;
+  /** ロゴ画像URL (動画右下に表示) */
+  logoUrl?: string;
   /** collageスタイル用: 背景色 (default: #FAF8F5) */
   bgColor?: string;
   /** collageスタイル用: テキスト色 (default: #1C1C1C) */
