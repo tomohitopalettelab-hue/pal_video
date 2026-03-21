@@ -4,7 +4,6 @@ html, body {
   margin: 0;
   padding: 0;
   background-color: #F5F0F2;
-  /* overflow は各ページのルート div で個別に制御 */
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -21,42 +20,85 @@ html, body {
   display: none;
 }
 
-/* ── Cut Preview Card Animations ─────────────────────────────────────────── */
-@keyframes pvStripIn {
-  from { transform: translateX(-100%); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
-}
-@keyframes pvLineExpand {
-  from { width: 0;    opacity: 0; }
-  to   { width: 100%; opacity: 1; }
-}
-@keyframes pvTextUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes pvSubUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes pvFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes pvPlusIn {
-  0%   { opacity: 0; transform: scale(0) rotate(45deg); }
-  70%  { transform: scale(1.2) rotate(0deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0deg); }
-}
-@keyframes pvDotGrid {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* ── Cut Preview Card — 常時アニメーション ────────────────────────────────── */
+/*
+  設計: エントリー（0〜10%）+ アイドルループ（10〜100%）を1つの keyframes に統合。
+  infinite で回すことで常に何かが動いている状態を保つ。
+*/
+
+/* 画像: Ken Burns（ゆっくりズーム + パン、8秒ループ）*/
+@keyframes pvImgKenBurns {
+  0%   { opacity: 0; transform: scale(1.02) translate(0%,    0%);   }
+  6%   { opacity: 1;                                                 }
+  30%  {             transform: scale(1.07) translate(-1.5%, 1%);   }
+  65%  {             transform: scale(1.04) translate(1%,   -0.5%); }
+  100% {             transform: scale(1.02) translate(0%,    0%);   }
 }
 
-.pv-strip  { animation: pvStripIn   0.35s cubic-bezier(0.4,0,0.2,1) both; }
-.pv-line   { animation: pvLineExpand 0.4s cubic-bezier(0.4,0,0.2,1) 0.3s both; }
-.pv-main   { animation: pvTextUp    0.5s cubic-bezier(0.2,0,0,1)    0.4s both; }
-.pv-sub    { animation: pvSubUp     0.5s cubic-bezier(0.2,0,0,1)    0.55s both; }
-.pv-plus1  { animation: pvPlusIn    0.4s cubic-bezier(0.4,0,0.2,1)  0.1s both; }
-.pv-plus2  { animation: pvPlusIn    0.4s cubic-bezier(0.4,0,0.2,1)  0.2s both; }
-.pv-dots   { animation: pvDotGrid   0.5s ease                       0.6s both; }
-.pv-img    { animation: pvFadeIn    0.6s ease                       0s both; }
+/* アクセントストリップ: スライドイン → 輝度パルス（4秒ループ）*/
+@keyframes pvStripPulse {
+  0%   { transform: translateX(-100%); opacity: 0;   }
+  12%  { transform: translateX(0);     opacity: 1;   }
+  50%  {                               opacity: 0.82; }
+  100% {                               opacity: 1;   }
+}
+
+/* 区切りライン: 展開 → 幅パルス（3.5秒ループ）*/
+@keyframes pvLineBreath {
+  0%   { width: 0;   opacity: 0; }
+  12%  { width: 100%; opacity: 1; }
+  55%  { width: 75%;  opacity: 0.7; }
+  100% { width: 100%; opacity: 1; }
+}
+
+/* メインテキスト: ライズアップ → フロート（5秒ループ）*/
+@keyframes pvMainFloat {
+  0%   { opacity: 0; transform: translateY(14px); }
+  12%  { opacity: 1; transform: translateY(0);    }
+  50%  {             transform: translateY(-5px);  }
+  100% {             transform: translateY(0);    }
+}
+
+/* サブテキスト: ライズアップ → フロート（5秒ループ、位相ずらし）*/
+@keyframes pvSubFloat {
+  0%   { opacity: 0; transform: translateY(10px); }
+  14%  { opacity: 1; transform: translateY(0);    }
+  55%  {             transform: translateY(-4px);  }
+  100% {             transform: translateY(0);    }
+}
+
+/* ＋マーカー上: ポップイン → ゆっくり回転パルス（4秒ループ）*/
+@keyframes pvPlus1Pulse {
+  0%   { opacity: 0; transform: scale(0) rotate(45deg);  }
+  10%  { opacity: 1; transform: scale(1.2) rotate(0deg); }
+  15%  {             transform: scale(1) rotate(0deg);   }
+  50%  {             transform: scale(1.15) rotate(15deg); }
+  100% {             transform: scale(1) rotate(0deg);   }
+}
+
+/* ＋マーカー下: ポップイン → スケールブリーズ（5秒ループ）*/
+@keyframes pvPlus2Pulse {
+  0%   { opacity: 0; transform: scale(0) rotate(-45deg); }
+  12%  { opacity: 1; transform: scale(1.2) rotate(0deg); }
+  18%  {             transform: scale(1) rotate(0deg);   }
+  55%  {             transform: scale(1.25); }
+  100% {             transform: scale(1);   }
+}
+
+/* ドットグリッド: フェードイン → 上下フロート（4秒ループ）*/
+@keyframes pvDotsFloat {
+  0%   { opacity: 0; transform: translateY(4px);  }
+  14%  { opacity: 1; transform: translateY(0);    }
+  55%  {             transform: translateY(-4px); }
+  100% {             transform: translateY(0);    }
+}
+
+/* ── クラスへの割り当て ──────────────────────────────────────────────────── */
+.pv-img    { animation: pvImgKenBurns   8s   ease-in-out infinite; }
+.pv-strip  { animation: pvStripPulse    4s   cubic-bezier(0.4,0,0.2,1) infinite; }
+.pv-line   { animation: pvLineBreath    3.5s ease-in-out infinite; }
+.pv-main   { animation: pvMainFloat     5s   ease-in-out infinite; }
+.pv-sub    { animation: pvSubFloat      5s   ease-in-out 0.3s infinite; }
+.pv-plus1  { animation: pvPlus1Pulse    4s   ease-in-out infinite; }
+.pv-plus2  { animation: pvPlus2Pulse    5s   ease-in-out 0.5s infinite; }
+.pv-dots   { animation: pvDotsFloat     4s   ease-in-out 0.4s infinite; }
