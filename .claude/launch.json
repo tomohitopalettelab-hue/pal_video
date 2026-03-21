@@ -3,11 +3,9 @@
   "configurations": [
     {
       "name": "pal_video",
-      "runtimeExecutable": "C:\\Program Files\\nodejs\\npm.cmd",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3103"],
-      "cwd": "C:\\dev\\palette_system\\pal_video",
-      "port": 3103,
-      "autoPort": false
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3103
     }
   ]
 }

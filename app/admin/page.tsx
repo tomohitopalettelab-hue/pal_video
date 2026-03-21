@@ -27,7 +27,7 @@ const BGM_LABELS: Record<string, string> = {
   natural_warm: 'ナチュラル・ほのぼの',
 };
 
-// ── 10 Template Presets (pal_studio 連携) ────────────────────────────────────
+// ── 10 Template Presets ───────────────────────────────────────────────────────
 type TemplatePreset = {
   id: string;
   name: string;
@@ -123,6 +123,22 @@ const TEMPLATE_PRESETS: TemplatePreset[] = [
   },
 ];
 
+// ── Style Groups (スタイル分類) ────────────────────────────────────────────────
+type StyleGroup = {
+  styleId: 'magazine' | 'minimal' | 'standard' | 'collage' | 'gradient';
+  name: string;
+  icon: string;
+  desc: string;
+};
+
+const STYLE_GROUPS: StyleGroup[] = [
+  { styleId: 'magazine',  name: 'MAGAZINE',  icon: '📰', desc: '高級感・編集部風' },
+  { styleId: 'minimal',   name: 'MINIMAL',   icon: '⬜', desc: '洗練・余白重視'  },
+  { styleId: 'standard',  name: 'STANDARD',  icon: '🎬', desc: 'SNS映え・定番'   },
+  { styleId: 'gradient',  name: 'GRADIENT',  icon: '🎨', desc: 'カラフル・動的'  },
+  { styleId: 'collage',   name: 'COLLAGE',   icon: '🖼', desc: '複数写真・グリッド' },
+];
+
 // 用途 → 推奨テンプレート順
 const PURPOSE_TEMPLATE_DEFAULTS: Record<string, string[]> = {
   promotion:   ['modern', 'pop', 'corporate'],
@@ -185,9 +201,9 @@ const TRANSITION_OPTIONS = [
   { value: 'zoom',       label: 'ズーム' },
   { value: 'wipe',       label: 'ワイプ' },
   { value: 'color-wipe', label: 'カラーワイプ' },
-  { value: 'flip',       label: 'フリップ（スピン）' },
+  { value: 'flip',       label: 'フリップ' },
   { value: 'blur',       label: 'ブラー' },
-  { value: 'bounce',     label: 'バウンス（エラスティック）' },
+  { value: 'bounce',     label: 'バウンス' },
   { value: 'push',       label: 'プッシュ' },
   { value: 'film-roll',  label: 'フィルムロール' },
   { value: 'circular',   label: 'サークルワイプ' },
@@ -197,13 +213,13 @@ const TRANSITION_OPTIONS = [
 
 const ANIMATION_OPTIONS = [
   { value: 'slide',      label: 'スライド' },
-  { value: 'rise',       label: 'ライズ（大きくスライドアップ）' },
+  { value: 'rise',       label: 'ライズ' },
   { value: 'zoom',       label: 'ズーム' },
   { value: 'pop',        label: 'ポップ' },
-  { value: 'elastic',    label: 'エラスティック（強めポップ）' },
-  { value: 'text-slide', label: 'テキストスライド（単語ごと）' },
+  { value: 'elastic',    label: 'エラスティック' },
+  { value: 'text-slide', label: 'テキストスライド' },
   { value: 'typewriter', label: 'タイプライター' },
-  { value: 'spin',       label: 'スピン（回転）' },
+  { value: 'spin',       label: 'スピン' },
   { value: 'fade',       label: 'フェード' },
   { value: 'blur',       label: 'ブラー' },
   { value: 'wipe',       label: 'ワイプ' },
@@ -212,19 +228,11 @@ const ANIMATION_OPTIONS = [
 ];
 
 const LAYOUT_OPTIONS = [
-  { value: 'bottom',    label: 'ボトム（下テロップ）' },
-  { value: 'top',       label: 'トップ（上テロップ）' },
-  { value: 'center',    label: 'センター（全画面）' },
-  { value: 'caption',   label: 'キャプション（ソリッドバンド）' },
-  { value: 'billboard', label: 'ビルボード（大見出し）' },
-];
-
-const STYLE_OPTIONS = [
-  { value: 'standard', label: 'スタンダード（ダーク/KenBurns）' },
-  { value: 'magazine', label: 'マガジン（サイドパネル/高級感）' },
-  { value: 'minimal',  label: 'ミニマル（白背景/余白重視）' },
-  { value: 'collage',  label: 'コラージュ（白背景/ポラロイドグリッド）' },
-  { value: 'gradient', label: 'グラデーション（カラー全面/写真不要）' },
+  { value: 'bottom',    label: 'ボトム' },
+  { value: 'top',       label: 'トップ' },
+  { value: 'center',    label: 'センター' },
+  { value: 'caption',   label: 'キャプション' },
+  { value: 'billboard', label: 'ビルボード' },
 ];
 
 const DEFAULT_PAYLOAD: PalVideoPayload = {
@@ -299,7 +307,6 @@ function CutPreviewCard({ cut, payload, cutIndex, tmplFamily, tmplGradient, tmpl
   const is169 = dest === 'youtube' || dest === 'web_banner';
   const is11  = dest === 'instagram_feed';
 
-  // Card dimensions — lg: full featured, md: compact
   const cardW = size === 'lg'
     ? (is169 ? 440 : is11 ? 300 : 220)
     : (is169 ? 200 : is11 ? 130 : 90);
@@ -313,16 +320,10 @@ function CutPreviewCard({ cut, payload, cutIndex, tmplFamily, tmplGradient, tmpl
   const imageUrl = cut?.imageUrl || null;
   const label    = tmplFamily || (cutIndex !== undefined ? `CUT ${cutIndex + 1}` : '');
 
-  // Scale factor for font sizes relative to card width
   const s = cardW / 440;
-
-  // Left strip width
   const stripW = Math.round(cardW * 0.115);
-
-  // Background when no image
   const bgGrad = tmplGradient || `linear-gradient(145deg, ${colorPrimary} 0%, ${colorPrimary}dd 60%, ${colorAccent}55 100%)`;
 
-  // Text container position
   const textStyle: React.CSSProperties =
     layout === 'top'
       ? { position: 'absolute', top: Math.round(cardH * 0.08), left: stripW + Math.round(12 * s), right: Math.round(10 * s) }
@@ -330,7 +331,6 @@ function CutPreviewCard({ cut, payload, cutIndex, tmplFamily, tmplGradient, tmpl
       ? { position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: stripW + Math.round(12 * s), right: Math.round(10 * s) }
       : { position: 'absolute', bottom: Math.round(cardH * 0.06), left: stripW + Math.round(12 * s), right: Math.round(10 * s) };
 
-  // animKey triggers re-animation on content change
   const animKey = `${cut?.id ?? 'tmpl'}_${mainText}_${subText}_${colorAccent}_${imageUrl}`;
 
   return (
@@ -338,201 +338,80 @@ function CutPreviewCard({ cut, payload, cutIndex, tmplFamily, tmplGradient, tmpl
       key={animKey}
       className="relative overflow-hidden flex-shrink-0"
       style={{
-        width: cardW,
-        height: cardH,
+        width: cardW, height: cardH,
         borderRadius: Math.round(10 * s),
         background: imageUrl ? colorPrimary : bgGrad,
         boxShadow: '0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)',
       }}
     >
-      {/* ── Background Image ── */}
       {imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageUrl} alt=""
-          className="pv-img absolute inset-0 w-full h-full object-cover"
-        />
+        <img src={imageUrl} alt="" className="pv-img absolute inset-0 w-full h-full object-cover" />
       )}
-
-      {/* ── Dark overlay (image only, non-minimal styles) ── */}
       {imageUrl && style !== 'minimal' && (
-        <div
-          className="absolute inset-0"
-          style={{
-            background: layout === 'top'
-              ? `linear-gradient(160deg, ${colorPrimary}BB 0%, ${colorPrimary}44 45%, transparent 100%)`
-              : layout === 'center'
-              ? `${colorPrimary}55`
-              : `linear-gradient(to top, ${colorPrimary}DD 0%, ${colorPrimary}66 40%, transparent 75%)`,
-          }}
-        />
-      )}
-
-      {/* ── Left accent strip ── */}
-      <div
-        className="pv-strip absolute top-0 left-0 bottom-0 flex flex-col items-center"
-        style={{
-          width: stripW,
-          backgroundColor: colorAccent,
-          paddingTop: Math.round(10 * s),
-          paddingBottom: Math.round(10 * s),
-          zIndex: 4,
-        }}
-      >
-        {/* Top dot (filled) */}
-        <div style={{
-          width: Math.round(5 * s), height: Math.round(5 * s),
-          borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.95)',
-          flexShrink: 0,
+        <div className="absolute inset-0" style={{
+          background: layout === 'top'
+            ? `linear-gradient(160deg, ${colorPrimary}BB 0%, ${colorPrimary}44 45%, transparent 100%)`
+            : layout === 'center'
+            ? `${colorPrimary}55`
+            : `linear-gradient(to top, ${colorPrimary}DD 0%, ${colorPrimary}66 40%, transparent 75%)`,
         }} />
-
-        {/* Brand / cut label — rotated */}
+      )}
+      <div className="pv-strip absolute top-0 left-0 bottom-0 flex flex-col items-center" style={{
+        width: stripW, backgroundColor: colorAccent,
+        paddingTop: Math.round(10 * s), paddingBottom: Math.round(10 * s), zIndex: 4,
+      }}>
+        <div style={{ width: Math.round(5 * s), height: Math.round(5 * s), borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.95)', flexShrink: 0 }} />
         {label && size === 'lg' && (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <p style={{
-              writingMode: 'vertical-rl',
-              textOrientation: 'mixed',
-              fontSize: Math.round(7 * s),
-              fontWeight: 900,
-              letterSpacing: '0.18em',
-              color: 'rgba(255,255,255,0.92)',
-              lineHeight: 1,
-              userSelect: 'none',
-            }}>
+            <p style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: Math.round(7 * s), fontWeight: 900, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.92)', lineHeight: 1, userSelect: 'none' }}>
               {label.toUpperCase()}
             </p>
           </div>
         )}
-
-        {/* Bottom dot (outline) */}
-        <div style={{
-          width: Math.round(4 * s), height: Math.round(4 * s),
-          borderRadius: '50%', border: `${Math.max(1, Math.round(1 * s))}px solid rgba(255,255,255,0.7)`,
-          flexShrink: 0,
-        }} />
+        <div style={{ width: Math.round(4 * s), height: Math.round(4 * s), borderRadius: '50%', border: `${Math.max(1, Math.round(1 * s))}px solid rgba(255,255,255,0.7)`, flexShrink: 0 }} />
       </div>
-
-      {/* ── + Corner decoration — top right ── */}
-      <div
-        className="pv-plus1 absolute font-black select-none"
-        style={{
-          top: Math.round(8 * s), right: Math.round(10 * s),
-          fontSize: Math.round(18 * s), lineHeight: 1,
-          color: 'rgba(255,255,255,0.65)',
-          zIndex: 4,
-        }}
-      >+</div>
-
-      {/* ── + Corner decoration — bottom left (inside strip margin) ── */}
-      <div
-        className="pv-plus2 absolute font-black select-none"
-        style={{
-          bottom: Math.round(8 * s), left: stripW + Math.round(8 * s),
-          fontSize: Math.round(13 * s), lineHeight: 1,
-          color: colorAccent,
-          zIndex: 4,
-        }}
-      >+</div>
-
-      {/* ── Dot grid — bottom right ── */}
+      <div className="pv-plus1 absolute font-black select-none" style={{ top: Math.round(8 * s), right: Math.round(10 * s), fontSize: Math.round(18 * s), lineHeight: 1, color: 'rgba(255,255,255,0.65)', zIndex: 4 }}>+</div>
+      <div className="pv-plus2 absolute font-black select-none" style={{ bottom: Math.round(8 * s), left: stripW + Math.round(8 * s), fontSize: Math.round(13 * s), lineHeight: 1, color: colorAccent, zIndex: 4 }}>+</div>
       {size === 'lg' && (
-        <div
-          className="pv-dots absolute"
-          style={{
-            bottom: Math.round(10 * s), right: Math.round(10 * s),
-            display: 'grid',
-            gridTemplateColumns: `repeat(4, ${Math.round(3 * s)}px)`,
-            gap: Math.round(4 * s),
-            zIndex: 3,
-          }}
-        >
+        <div className="pv-dots absolute" style={{ bottom: Math.round(10 * s), right: Math.round(10 * s), display: 'grid', gridTemplateColumns: `repeat(4, ${Math.round(3 * s)}px)`, gap: Math.round(4 * s), zIndex: 3 }}>
           {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} style={{
-              width: Math.round(2.5 * s), height: Math.round(2.5 * s),
-              borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.28)',
-            }} />
+            <div key={i} style={{ width: Math.round(2.5 * s), height: Math.round(2.5 * s), borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.28)' }} />
           ))}
         </div>
       )}
-
-      {/* ── Horizontal dash line — top of text area ── */}
       {size === 'lg' && (
-        <div
-          className="absolute"
-          style={{
-            ...(layout === 'top'
-              ? { top: Math.round(cardH * 0.065), left: stripW + Math.round(12 * s) }
-              : layout === 'center'
-              ? { top: '48%', transform: 'translateY(-50%) translateY(-16px)', left: stripW + Math.round(12 * s) }
-              : { bottom: Math.round(cardH * 0.06 + (subText ? 36 * s : 20 * s)) + Math.round(16 * s), left: stripW + Math.round(12 * s) }),
-            width: Math.round(28 * s), height: Math.round(2.5 * s),
-            backgroundColor: colorAccent,
-            zIndex: 4,
-          }}
-        />
+        <div className="absolute" style={{
+          ...(layout === 'top'
+            ? { top: Math.round(cardH * 0.065), left: stripW + Math.round(12 * s) }
+            : layout === 'center'
+            ? { top: '48%', transform: 'translateY(-50%) translateY(-16px)', left: stripW + Math.round(12 * s) }
+            : { bottom: Math.round(cardH * 0.06 + (subText ? 36 * s : 20 * s)) + Math.round(16 * s), left: stripW + Math.round(12 * s) }),
+          width: Math.round(28 * s), height: Math.round(2.5 * s), backgroundColor: colorAccent, zIndex: 4,
+        }} />
       )}
-
-      {/* ── Text overlay ── */}
       <div style={{ ...textStyle, zIndex: 5 }}>
-        {/* Accent line (above main text, only in lg) */}
         {size === 'lg' && (
-          <div
-            className="pv-line"
-            style={{
-              width: Math.round(24 * s), height: Math.round(2.5 * s),
-              backgroundColor: colorAccent,
-              marginBottom: Math.round(6 * s),
-            }}
-          />
+          <div className="pv-line" style={{ width: Math.round(24 * s), height: Math.round(2.5 * s), backgroundColor: colorAccent, marginBottom: Math.round(6 * s) }} />
         )}
-
-        {/* Main text */}
         {mainText && (
-          <p
-            className="pv-main font-black leading-tight"
-            style={{
-              fontSize: Math.round((size === 'lg' ? 15 : 8) * s),
-              color: '#ffffff',
-              textShadow: '0 2px 8px rgba(0,0,0,0.6)',
-              lineHeight: 1.25,
-              wordBreak: 'break-word',
-            }}
-          >
+          <p className="pv-main font-black leading-tight" style={{ fontSize: Math.round((size === 'lg' ? 15 : 8) * s), color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.6)', lineHeight: 1.25, wordBreak: 'break-word' }}>
             {mainText}
           </p>
         )}
-
-        {/* Sub text */}
         {subText && (
-          <p
-            className="pv-sub leading-tight"
-            style={{
-              fontSize: Math.round((size === 'lg' ? 9.5 : 5.5) * s),
-              color: 'rgba(255,255,255,0.82)',
-              marginTop: Math.round(5 * s),
-              lineHeight: 1.4,
-              wordBreak: 'break-word',
-            }}
-          >
+          <p className="pv-sub leading-tight" style={{ fontSize: Math.round((size === 'lg' ? 9.5 : 5.5) * s), color: 'rgba(255,255,255,0.82)', marginTop: Math.round(5 * s), lineHeight: 1.4, wordBreak: 'break-word' }}>
             {subText}
           </p>
         )}
       </div>
-
-      {/* ── Duration badge ── */}
       {cut && size === 'lg' && (
-        <div
-          className="absolute"
-          style={{
-            top: Math.round(8 * s), left: stripW + Math.round(8 * s),
-            fontSize: Math.round(7.5 * s),
-            color: 'rgba(255,255,255,0.75)',
-            backgroundColor: 'rgba(0,0,0,0.35)',
-            padding: `${Math.round(2 * s)}px ${Math.round(5 * s)}px`,
-            borderRadius: Math.round(4 * s),
-            zIndex: 4,
-          }}
-        >
+        <div className="absolute" style={{
+          top: Math.round(8 * s), left: stripW + Math.round(8 * s),
+          fontSize: Math.round(7.5 * s), color: 'rgba(255,255,255,0.75)',
+          backgroundColor: 'rgba(0,0,0,0.35)', padding: `${Math.round(2 * s)}px ${Math.round(5 * s)}px`,
+          borderRadius: Math.round(4 * s), zIndex: 4,
+        }}>
           {cut.duration}s
         </div>
       )}
@@ -542,91 +421,47 @@ function CutPreviewCard({ cut, payload, cutIndex, tmplFamily, tmplGradient, tmpl
 
 // ── Hearing Modal ─────────────────────────────────────────────────────────────
 
-type HearingModalProps = {
-  payload: PalVideoPayload;
-  onClose: () => void;
-};
+type HearingModalProps = { payload: PalVideoPayload; onClose: () => void };
 
 function HearingModal({ payload, onClose }: HearingModalProps) {
   const messages = payload.hearingMessages || [];
   const answers  = payload.hearingAnswers  || [];
-
-  // Prefer hearingMessages (chat-style), fall back to hearingAnswers (Q&A)
   const hasChat = messages.length > 0;
   const hasQA   = answers.length > 0;
-
   if (!hasChat && !hasQA) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4"
-      onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-2">
             <MessageCircle size={16} style={{ color: ACCENT }} />
             <h3 className="font-bold text-slate-800 text-sm">ヒアリング内容</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100">
-            <X size={16} />
-          </button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100"><X size={16} /></button>
         </div>
-
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {hasChat ? (
-            // Chat-style display using hearingMessages
-            messages
-              .filter((m) => m.role !== 'system')
-              .map((m, idx) => {
-                const isUser = m.role === 'user';
-                return (
-                  <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-                    {!isUser && (
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[8px] font-black flex-shrink-0 mr-2 mt-0.5"
-                        style={{ backgroundColor: ACCENT }}
-                      >
-                        AI
-                      </div>
-                    )}
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${
-                        isUser
-                          ? 'bg-slate-800 text-white rounded-br-sm'
-                          : 'bg-slate-100 text-slate-700 rounded-bl-sm'
-                      }`}
-                    >
-                      {m.content}
-                    </div>
-                  </div>
-                );
-              })
-          ) : (
-            // Q&A style fallback
-            answers
-              .filter((qa) => qa.a && qa.a !== '••••••')
-              .map((qa, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-start">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[8px] font-black flex-shrink-0 mr-2 mt-0.5"
-                      style={{ backgroundColor: ACCENT }}
-                    >
-                      AI
-                    </div>
-                    <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-slate-100 text-slate-700 px-3 py-2 text-xs leading-relaxed">
-                      {qa.q}
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-slate-800 text-white px-3 py-2 text-xs leading-relaxed">
-                      {qa.a}
-                    </div>
-                  </div>
+            messages.filter((m) => m.role !== 'system').map((m, idx) => {
+              const isUser = m.role === 'user';
+              return (
+                <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                  {!isUser && <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[8px] font-black flex-shrink-0 mr-2 mt-0.5" style={{ backgroundColor: ACCENT }}>AI</div>}
+                  <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${isUser ? 'bg-slate-800 text-white rounded-br-sm' : 'bg-slate-100 text-slate-700 rounded-bl-sm'}`}>{m.content}</div>
                 </div>
-              ))
+              );
+            })
+          ) : (
+            answers.filter((qa) => qa.a && qa.a !== '••••••').map((qa, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="flex justify-start">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[8px] font-black flex-shrink-0 mr-2 mt-0.5" style={{ backgroundColor: ACCENT }}>AI</div>
+                  <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-slate-100 text-slate-700 px-3 py-2 text-xs leading-relaxed">{qa.q}</div>
+                </div>
+                <div className="flex justify-end">
+                  <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-slate-800 text-white px-3 py-2 text-xs leading-relaxed">{qa.a}</div>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>
@@ -658,10 +493,7 @@ function MediaModal({ paletteId, onSelect, onClose }: MediaModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-bold text-slate-800">メディアを選択</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100"><X size={16} /></button>
@@ -672,15 +504,11 @@ function MediaModal({ paletteId, onSelect, onClose }: MediaModalProps) {
           {!isLoading && assets.length === 0 && <p className="text-sm text-slate-400 text-center py-8">メディアがありません。</p>}
           <div className="grid grid-cols-3 gap-3">
             {assets.map((asset, idx) => (
-              <button
-                key={idx}
-                onClick={() => { onSelect(asset.url); onClose(); }}
-                className="rounded-xl overflow-hidden border-2 border-transparent hover:border-rose-400 transition-all group"
-              >
+              <button key={idx} onClick={() => { onSelect(asset.url); onClose(); }}
+                className="rounded-xl overflow-hidden border-2 border-transparent hover:border-rose-400 transition-all group">
                 <div className="aspect-square relative overflow-hidden bg-slate-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={asset.url} alt={asset.originalName || asset.fileName || 'media'}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  <img src={asset.url} alt={asset.originalName || asset.fileName || 'media'} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                 </div>
                 <p className="text-[10px] text-slate-500 p-1 truncate">{asset.originalName || asset.fileName || 'image'}</p>
               </button>
@@ -718,18 +546,14 @@ export default function AdminPage() {
 
   // State: UI
   const [showMediaModal, setShowMedia]        = useState(false);
-  const [mediaSlot, setMediaSlot]             = useState<number>(0); // 0=single/slot0, 1-3=collage slots
+  const [mediaSlot, setMediaSlot]             = useState<number>(0);
   const [showHearingModal, setShowHearing]    = useState(false);
   const [showHearingInline, setShowInline]    = useState(false);
   const [showColorOverride, setShowColor]     = useState(false);
   const [opMessage, setOpMessage]             = useState('');
+  const [activeStep, setActiveStep]           = useState<1 | 2 | 3>(1);
 
-  // State: template gallery
-  const [tmplPlatform, setTmplPlatform]     = useState<string>('');
-  const [tmplDuration, setTmplDuration]     = useState<number>(0);
-  const [tmplPurpose, setTmplPurpose]       = useState<string>('');
-  const [tmplFamily, setTmplFamily]         = useState<string>('');
-  const [selectedTmplId, setSelectedTmpl]   = useState<string>('');
+  // State: BGM
   const [bgmPlaying, setBgmPlaying]         = useState(false);
   const bgmAudioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -740,6 +564,8 @@ export default function AdminPage() {
   const hasHearing = (editingPayload.hearingMessages?.length ?? 0) > 0
                   || (editingPayload.hearingAnswers?.length ?? 0) > 0
                   || Object.keys(editingPayload.hearingData ?? {}).length > 0;
+  const destDimsLabel = DIMS_LABEL[editingPayload.destination || 'instagram_reel'] || '';
+  const totalDurationSec = (editingPayload.cuts || []).reduce((s, c) => s + (c.duration || 3), 0);
 
   // ── Load customers ────────────────────────────────────────────────────────
 
@@ -798,7 +624,6 @@ export default function AdminPage() {
 
   // ── Apply template ────────────────────────────────────────────────────────
   const handleApplyTemplate = (tmpl: VideoTemplate) => {
-    setSelectedTmpl(tmpl.id);
     const totalDur = tmpl.duration;
     const newCuts = tmpl.cuts.map((tc, i) => ({
       id: `cut_${Date.now()}_${i}`,
@@ -837,15 +662,12 @@ export default function AdminPage() {
       bgmAudioRef.current.pause();
       setBgmPlaying(false);
     } else {
-      if (bgmAudioRef.current.src !== url) {
-        bgmAudioRef.current.src = url;
-      }
+      if (bgmAudioRef.current.src !== url) bgmAudioRef.current.src = url;
       bgmAudioRef.current.play().catch(() => {});
       setBgmPlaying(true);
     }
   };
 
-  // Stop BGM when bgm setting changes
   useEffect(() => {
     if (bgmAudioRef.current) {
       bgmAudioRef.current.pause();
@@ -876,6 +698,7 @@ export default function AdminPage() {
         setPayload({ ...DEFAULT_PAYLOAD, ...body.job.payload });
         setPreviewUrl(null);
         setSelectedCutId(null);
+        setActiveStep(1);
         setOpMessage('新しいジョブを作成しました。');
         setTimeout(() => setOpMessage(''), 3000);
       }
@@ -921,9 +744,7 @@ export default function AdminPage() {
         }),
       });
       const resBody = await res.json().catch(() => ({}));
-      if (!res.ok || !resBody?.job) {
-        throw new Error(resBody?.error || '保存に失敗しました。');
-      }
+      if (!res.ok || !resBody?.job) throw new Error(resBody?.error || '保存に失敗しました。');
       const updated = resBody.job as PalVideoJob;
       setJobs((prev) => {
         const idx = prev.findIndex((j) => j.id === updated.id);
@@ -937,7 +758,7 @@ export default function AdminPage() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '保存に失敗しました。';
       setOpMessage(`⚠️ ${msg}`);
-      throw e; // re-throw so handleRender knows the save failed
+      throw e;
     }
     finally  { setIsSaving(false); }
   };
@@ -992,7 +813,7 @@ export default function AdminPage() {
   const handleRender = async (mode: 'preview' | 'final', _retryCount = 0) => {
     if (!selectedJobId) { setOpMessage('先に保存してください。'); return; }
     setIsRendering(true);
-    setOpMessage(mode === 'preview' ? 'プレビューを生成中（バックグラウンド）...' : '最終レンダリング中（バックグラウンド）...');
+    setOpMessage(mode === 'preview' ? 'プレビューを生成中...' : '最終レンダリング中...');
     try {
       await handleSave();
       const res  = await fetch('/api/render', {
@@ -1002,19 +823,16 @@ export default function AdminPage() {
       const body = await res.json().catch(() => ({}));
 
       if (body?.url) {
-        // 即時返却（旧 Creatomate 互換）
         setPreviewUrl(body.url);
         setOpMessage(mode === 'preview' ? 'プレビューURLを取得しました。' : 'レンダリング完了！');
         setTimeout(() => setOpMessage(''), 5000);
         setIsRendering(false);
       } else if (body?.status === 'rendering') {
-        // FFmpeg バックグラウンドレンダー → ポーリング
         setOpMessage('🎬 レンダリング開始...');
         setRenderProgress({ current: 0, total: 1, label: '準備中...' });
         const jobIdToPoll = selectedJobId;
-        // preview: 10分, final: 120分
         const maxPollMs = mode === 'preview' ? 600000 : 7200000;
-        const staleMs   = mode === 'preview' ? 120000  : 600000; // 進捗なし許容時間
+        const staleMs   = mode === 'preview' ? 120000  : 600000;
         let lastProgressLabel = '';
         let lastProgressAt = Date.now();
         const poll = setInterval(async () => {
@@ -1041,14 +859,12 @@ export default function AdminPage() {
               setOpMessage(`⚠️ レンダリングエラー: ${errMsg}`);
               setIsRendering(false);
             } else if (String(job?.status) === 'draft' && _retryCount < 2) {
-              // サーバー再起動でジョブが draft に戻った → 自動リトライ
               clearInterval(poll);
               setRenderProgress(null);
               const retryNum = _retryCount + 1;
               setOpMessage(`🔄 サーバーが再起動しました。自動リトライ中... (${retryNum}/2)`);
               setTimeout(() => handleRender(mode, retryNum), 3000);
             } else if (Date.now() - lastProgressAt > staleMs) {
-              // 進捗が staleMs 以上変化なし → スタックとみなす
               clearInterval(poll);
               setRenderProgress(null);
               if (_retryCount < 2) {
@@ -1062,20 +878,18 @@ export default function AdminPage() {
             }
           } catch { /* ポーリング中の一時エラーは無視 */ }
         }, 4000);
-        // maxPollMs でタイムアウト
         setTimeout(() => {
           clearInterval(poll);
           setRenderProgress(null);
-          setOpMessage('⚠️ タイムアウト。ページを更新して確認してください。'); setIsRendering(false);
+          setOpMessage('⚠️ タイムアウト。ページを更新して確認してください。');
+          setIsRendering(false);
         }, maxPollMs);
       } else {
         setOpMessage(body?.error || 'レンダリングに失敗しました。');
         setIsRendering(false);
       }
     } catch (e: unknown) {
-      if (!(e instanceof Error && e.message.includes('保存'))) {
-        setOpMessage('レンダリングに失敗しました。');
-      }
+      if (!(e instanceof Error && e.message.includes('保存'))) setOpMessage('レンダリングに失敗しました。');
       setIsRendering(false);
     }
   };
@@ -1087,9 +901,11 @@ export default function AdminPage() {
     window.location.href = '/login';
   };
 
-  // ── UI ────────────────────────────────────────────────────────────────────
+  // ── Suppress unused-import warnings (used via handleApplyTemplate) ─────────
+  void TEMPLATES; void PLATFORM_LABELS; void PURPOSE_LABELS; void DURATION_LABELS;
+  void PURPOSE_TEMPLATE_DEFAULTS; void destDimsLabel;
 
-  const destDimsLabel = DIMS_LABEL[editingPayload.destination || 'instagram_reel'] || '';
+  // ── UI ────────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
@@ -1097,17 +913,14 @@ export default function AdminPage() {
       {/* ── LEFT SIDEBAR ─────────────────────────────────────────── */}
       <aside className="w-64 border-r border-slate-200 bg-white flex flex-col flex-shrink-0">
         <div className="p-4 border-b border-slate-100 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: ACCENT }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: ACCENT }}>
             <span className="text-white text-[10px] font-black">PV</span>
           </div>
           <div className="min-w-0">
             <h1 className="text-sm font-black text-slate-800 leading-none">Pal Video</h1>
             <p className="text-[9px] text-slate-400 uppercase tracking-wider">Admin</p>
           </div>
-          <button onClick={handleLogout}
-            className="ml-auto p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-            title="ログアウト">
+          <button onClick={handleLogout} className="ml-auto p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600" title="ログアウト">
             <LogOut size={14} />
           </button>
         </div>
@@ -1126,20 +939,15 @@ export default function AdminPage() {
               : tier === 'standard' ? 'bg-blue-100 text-blue-700'
               : 'bg-slate-100 text-slate-500';
             return (
-              <button key={customer.paletteId}
-                onClick={() => handleSelectCustomer(customer.paletteId)}
-                className={`w-full text-left px-4 py-3 border-b border-slate-50 transition-colors ${
-                  isSelected ? 'bg-rose-50 border-r-4' : 'hover:bg-slate-50 border-r-4 border-r-transparent'
-                }`}
+              <button key={customer.paletteId} onClick={() => handleSelectCustomer(customer.paletteId)}
+                className={`w-full text-left px-4 py-3 border-b border-slate-50 transition-colors ${isSelected ? 'bg-rose-50 border-r-4' : 'hover:bg-slate-50 border-r-4 border-r-transparent'}`}
                 style={isSelected ? { borderRightColor: ACCENT } : {}}>
                 <div className="flex items-start justify-between gap-1">
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-800 truncate">{customer.name || '名称未設定'}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{customer.paletteId}</p>
                   </div>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${tierColor}`}>
-                    {tier}
-                  </span>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${tierColor}`}>{tier}</span>
                 </div>
               </button>
             );
@@ -1164,11 +972,7 @@ export default function AdminPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-slate-700 truncate">
                   {selectedCustomer.name}
-                  {selectedJob && (
-                    <span className="ml-2 text-slate-400 font-normal">
-                      / {selectedJob.payload?.title || '無題の動画'}
-                    </span>
-                  )}
+                  {selectedJob && <span className="ml-2 text-slate-400 font-normal">/ {selectedJob.payload?.title || '無題の動画'}</span>}
                 </p>
                 {selectedJob && (
                   <div className="flex items-center gap-2 mt-0.5">
@@ -1176,41 +980,27 @@ export default function AdminPage() {
                       {STATUS_LABELS[selectedJob.status]?.label || selectedJob.status}
                     </span>
                     {selectedJob.createdAt && (
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(selectedJob.createdAt).toLocaleDateString('ja-JP')}
-                      </span>
+                      <span className="text-[10px] text-slate-400">{new Date(selectedJob.createdAt).toLocaleDateString('ja-JP')}</span>
                     )}
                   </div>
                 )}
               </div>
-
-              {/* Hearing button */}
               {hasHearing && (
-                <button
-                  onClick={() => setShowHearing(true)}
+                <button onClick={() => setShowHearing(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
-                  style={{ borderColor: ACCENT, color: ACCENT }}
-                >
-                  <MessageCircle size={12} />
-                  ヒアリング内容
+                  style={{ borderColor: ACCENT, color: ACCENT }}>
+                  <MessageCircle size={12} /> ヒアリング内容
                 </button>
               )}
-
-              {/* Job tabs */}
               <div className="flex items-center gap-1 flex-shrink-0">
                 {jobs.map((job) => (
                   <button key={job.id} onClick={() => handleSelectJob(job)}
-                    className={`text-[10px] px-2 py-1 rounded font-medium transition-colors ${
-                      job.id === selectedJobId
-                        ? 'text-white'
-                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                    }`}
+                    className={`text-[10px] px-2 py-1 rounded font-medium transition-colors ${job.id === selectedJobId ? 'text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                     style={job.id === selectedJobId ? { backgroundColor: ACCENT } : {}}>
-                    {job.payload?.title ? job.payload.title.slice(0, 8) : `Job ${jobs.indexOf(job) + 1}`}
+                    {job.payload?.title ? String(job.payload.title).slice(0, 8) : `Job ${jobs.indexOf(job) + 1}`}
                   </button>
                 ))}
-                <button onClick={handleNewJob} disabled={isSaving}
-                  className="p-1 rounded hover:bg-slate-100 text-slate-500" title="新規ジョブ">
+                <button onClick={handleNewJob} disabled={isSaving} className="p-1 rounded hover:bg-slate-100 text-slate-500" title="新規ジョブ">
                   <Plus size={14} />
                 </button>
               </div>
@@ -1233,461 +1023,595 @@ export default function AdminPage() {
                 </div>
               </div>
             ) : selectedJob ? (
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+              <div className="flex-1 flex flex-col overflow-hidden">
 
-                {/* ── Template Gallery ──────────────────────────────────────── */}
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-bold text-slate-500 uppercase flex-shrink-0">テンプレート</p>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <select value={tmplPlatform} onChange={e => setTmplPlatform(e.target.value)}
-                        className="text-[10px] border border-slate-200 rounded px-1.5 py-0.5 bg-white text-slate-600">
-                        <option value="">全プラットフォーム</option>
-                        {(['instagram_reel','instagram_story','instagram_feed','tiktok','youtube_short','youtube','x_twitter','line_voom','facebook','web_banner'] as const).map(p => (
-                          <option key={p} value={p}>{PLATFORM_LABELS[p]}</option>
-                        ))}
-                      </select>
-                      <select value={tmplDuration} onChange={e => setTmplDuration(Number(e.target.value))}
-                        className="text-[10px] border border-slate-200 rounded px-1.5 py-0.5 bg-white text-slate-600">
-                        <option value={0}>全尺</option>
-                        <option value={15}>15秒</option>
-                        <option value={30}>30秒</option>
-                        <option value={60}>60秒</option>
-                      </select>
-                      <select value={tmplPurpose} onChange={e => setTmplPurpose(e.target.value)}
-                        className="text-[10px] border border-slate-200 rounded px-1.5 py-0.5 bg-white text-slate-600">
-                        <option value="">全用途</option>
-                        {(['promotion','sns_post','sns_ad','review','achievement'] as const).map(p => (
-                          <option key={p} value={p}>{PURPOSE_LABELS[p]}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar p-3">
-                    {TEMPLATES.filter(t =>
-                      (!tmplPlatform || t.platform === tmplPlatform) &&
-                      (!tmplDuration || t.duration === tmplDuration) &&
-                      (!tmplPurpose  || t.purpose  === tmplPurpose)
-                    ).slice(0, 40).map((tmpl) => (
-                      <button key={tmpl.id}
-                        onClick={() => handleApplyTemplate(tmpl)}
-                        className={`flex-shrink-0 w-28 rounded-xl overflow-hidden border-2 transition-all text-left ${
-                          selectedTmplId === tmpl.id
-                            ? 'border-rose-400 shadow-md scale-105'
-                            : 'border-slate-200 hover:border-slate-300'
-                        }`}
-                        style={selectedTmplId === tmpl.id ? { borderColor: ACCENT } : {}}>
-                        {/* Thumbnail */}
-                        <div className="h-20 relative flex items-center justify-center"
-                          style={{ background: tmpl.thumbnailGradient }}>
-                          {/* Layout diagram */}
-                          <div className="absolute inset-x-2 bottom-2 space-y-0.5">
-                            {tmpl.cuts.slice(0, 3).map((c, i) => (
-                              <div key={i} className={`h-1 rounded-full bg-white/60 ${
-                                c.layout === 'top' ? 'w-3/4' : c.layout === 'center' ? 'w-1/2 mx-auto' : 'w-full'
-                              }`} />
-                            ))}
-                          </div>
-                          <div className="absolute top-1.5 right-1.5">
-                            <span className="text-[8px] bg-black/40 text-white px-1 py-0.5 rounded">
-                              {DURATION_LABELS[tmpl.duration]}
-                            </span>
-                          </div>
-                          <div className="absolute top-1.5 left-1.5">
-                            <span className="text-[8px] bg-black/40 text-white px-1 py-0.5 rounded">
-                              {tmpl.cuts.length}カット
-                            </span>
-                          </div>
-                        </div>
-                        {/* Info */}
-                        <div className="p-1.5 bg-white">
-                          <p className="text-[9px] font-bold text-slate-700 truncate">{tmpl.family}</p>
-                          <p className="text-[8px] text-slate-400 truncate">{PURPOSE_LABELS[tmpl.purpose]}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* BGM Player */}
-                  <div className="border-t border-slate-100 px-4 py-2.5 flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-slate-500 flex-shrink-0">🎵 BGM</span>
-                    <select
-                      value={editingPayload.bgm || ''}
-                      onChange={(e) => {
-                        setPayload((prev) => ({ ...prev, bgm: e.target.value }));
-                        if (bgmAudioRef.current) {
-                          bgmAudioRef.current.pause();
-                          bgmAudioRef.current = null;
-                          setBgmPlaying(false);
-                        }
-                      }}
-                      className="flex-1 text-[11px] border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 outline-none">
-                      <option value="">BGMなし</option>
-                      {Object.entries(BGM_LABELS).map(([k, v]) => (
-                        <option key={k} value={k}>{v}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleBgmToggle}
-                      disabled={!editingPayload.bgm}
-                      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-sm transition-colors ${
-                        bgmPlaying ? 'bg-rose-500' : editingPayload.bgm ? 'bg-slate-600 hover:bg-slate-800' : 'bg-slate-200'
-                      }`}
-                      title={bgmPlaying ? '停止' : '試聴'}>
-                      {bgmPlaying ? '⏸' : '▶'}
+                {/* ── Step tabs ──────────────────────────────────────── */}
+                <div className="bg-white border-b border-slate-100 flex items-center px-2 flex-shrink-0">
+                  {([
+                    { n: 1 as const, label: 'スタイル選択', icon: '🎨' },
+                    { n: 2 as const, label: 'コンテンツ編集', icon: '✏️' },
+                    { n: 3 as const, label: '出力・公開', icon: '🚀' },
+                  ] as const).map(({ n, label, icon }) => (
+                    <button key={n} onClick={() => setActiveStep(n)}
+                      className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold border-b-2 transition-colors ${activeStep === n ? 'text-slate-800' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                      style={activeStep === n ? { borderBottomColor: ACCENT } : {}}>
+                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]"
+                        style={{ backgroundColor: activeStep === n ? ACCENT : '#e2e8f0', color: activeStep === n ? '#fff' : '#94a3b8' }}>
+                        {n}
+                      </span>
+                      <span className="hidden sm:inline">{icon}</span>
+                      {label}
                     </button>
-                  </div>
+                  ))}
                 </div>
 
-                {/* ── Live Preview Section ──────────────────────────────── */}
-                {(selectedTmplId || (editingPayload.cuts || []).length > 0) && (() => {
-                  const tmpl = TEMPLATES.find((t) => t.id === selectedTmplId);
-                  const cuts = editingPayload.cuts || [];
-                  const activeCut = cuts.find((c) => c.id === selectedCutId) || cuts[0] || null;
-                  const activeCutIdx = activeCut ? cuts.findIndex((c) => c.id === activeCut.id) : -1;
-                  const dest = editingPayload.destination || 'instagram_reel';
-                  const is169 = dest === 'youtube' || dest === 'web_banner';
-                  // For portrait formats: side-by-side layout; for landscape: stacked
-                  const sideLayout = !is169;
-                  return (
-                    <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
-                      {/* Header */}
-                      <div className="px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT }} />
-                          <p className="text-[11px] font-black text-white/80 uppercase tracking-widest">Live Preview</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {activeCut && activeCutIdx >= 0 && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${ACCENT}30`, color: ACCENT }}>
-                              CUT {activeCutIdx + 1} / {cuts.length}
-                            </span>
-                          )}
-                          {!activeCut && tmpl && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white/50" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
-                              {tmpl.family}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                {/* ── Step content ───────────────────────────────────── */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
 
-                      {/* Main content */}
-                      <div className={`px-4 pb-4 flex gap-4 ${sideLayout ? 'flex-row items-start' : 'flex-col items-center'}`}>
+                  {/* ════════ STEP 1: スタイル選択 ════════ */}
+                  {activeStep === 1 && (
+                    <div className="p-5 space-y-6">
 
-                        {/* Large preview card */}
-                        <div className="flex-shrink-0">
-                          <CutPreviewCard
-                            cut={activeCut}
-                            cutIndex={activeCutIdx >= 0 ? activeCutIdx : undefined}
-                            payload={editingPayload}
-                            tmplFamily={!activeCut && tmpl ? tmpl.family : undefined}
-                            tmplGradient={tmpl?.thumbnailGradient}
-                            tmplFirstCut={tmpl?.cuts[0]}
-                            size="lg"
-                          />
-                        </div>
-
-                        {/* Cut strip — scroll of small previews */}
-                        <div className={`flex gap-2 ${sideLayout ? 'flex-col overflow-y-auto max-h-96' : 'flex-row overflow-x-auto w-full'} no-scrollbar`}>
-
-                          {/* Template placeholder cuts */}
-                          {cuts.length === 0 && tmpl && tmpl.cuts.slice(0, 8).map((tc, i) => (
-                            <div key={i}
-                              className="flex-shrink-0 rounded-xl overflow-hidden"
-                              style={{
-                                width: sideLayout ? 80 : 60, height: sideLayout ? 142 : 80,
-                                background: tmpl.thumbnailGradient,
-                                opacity: 0.6,
-                                border: '2px solid rgba(255,255,255,0.1)',
-                              }}>
-                              <div className="w-full h-full flex items-end p-1.5">
-                                <p className="text-[8px] text-white/80 font-bold leading-tight line-clamp-2">{tc.mainTextPlaceholder}</p>
-                              </div>
-                            </div>
-                          ))}
-
-                          {/* Actual cut thumbnails */}
-                          {cuts.map((cut, idx) => {
-                            const isActive = cut.id === activeCut?.id;
+                      {/* ① 投稿先 */}
+                      <section>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2.5">
+                          <span className="inline-flex w-5 h-5 rounded-full text-white text-[9px] items-center justify-center mr-1.5" style={{ backgroundColor: ACCENT }}>1</span>
+                          投稿先を選ぶ
+                        </p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {DESTINATION_OPTIONS.map((opt) => {
+                            const isSelected = editingPayload.destination === opt.value;
                             return (
-                              <button
-                                key={cut.id}
-                                onClick={() => setSelectedCutId(cut.id)}
-                                className="flex-shrink-0 rounded-xl overflow-hidden transition-all relative group"
-                                style={{
-                                  width: sideLayout ? 80 : 64,
-                                  height: sideLayout ? 142 : 80,
-                                  border: isActive ? `2px solid ${ACCENT}` : '2px solid rgba(255,255,255,0.12)',
-                                  boxShadow: isActive ? `0 0 12px ${ACCENT}66` : 'none',
-                                  transform: isActive ? 'scale(1.04)' : 'scale(1)',
+                              <button key={opt.value}
+                                onClick={() => setPayload((p) => ({ ...p, destination: opt.value }))}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl border-2 text-left transition-all ${isSelected ? 'bg-rose-50' : 'bg-white hover:border-slate-300 border-slate-200'}`}
+                                style={isSelected ? { borderColor: ACCENT } : {}}>
+                                <p className="text-[11px] font-bold text-slate-700 truncate">{opt.label}</p>
+                                <span className="text-[9px] text-slate-400 flex-shrink-0 ml-1">{opt.dims}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+
+                      {/* ② スタイル */}
+                      <section>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2.5">
+                          <span className="inline-flex w-5 h-5 rounded-full text-white text-[9px] items-center justify-center mr-1.5" style={{ backgroundColor: ACCENT }}>2</span>
+                          スタイルを選ぶ
+                        </p>
+                        <div className="grid grid-cols-5 gap-2">
+                          {STYLE_GROUPS.map((sg) => {
+                            const isSelected = editingPayload.style === sg.styleId;
+                            return (
+                              <button key={sg.styleId}
+                                onClick={() => {
+                                  const firstPreset = TEMPLATE_PRESETS.find((p) => p.style === sg.styleId);
+                                  if (firstPreset) {
+                                    setPayload((p) => ({
+                                      ...p,
+                                      style:        sg.styleId,
+                                      templateId:   firstPreset.id,
+                                      colorPrimary: firstPreset.colorPrimary,
+                                      colorAccent:  firstPreset.colorAccent,
+                                      textColor:    firstPreset.textColor,
+                                      bgColor:      firstPreset.bgColor,
+                                      bgm:          firstPreset.bgm,
+                                    }));
+                                  } else {
+                                    setPayload((p) => ({ ...p, style: sg.styleId }));
+                                  }
                                 }}
-                              >
-                                <CutPreviewCard
-                                  cut={cut}
-                                  cutIndex={idx}
-                                  payload={editingPayload}
-                                  size="md"
-                                />
-                                {/* Cut number badge */}
-                                <div className="absolute top-1 right-1 rounded-full flex items-center justify-center"
-                                  style={{
-                                    width: 14, height: 14,
-                                    backgroundColor: isActive ? ACCENT : 'rgba(0,0,0,0.55)',
-                                    fontSize: 7, fontWeight: 900, color: '#fff',
-                                  }}>
-                                  {idx + 1}
+                                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${isSelected ? 'bg-rose-50' : 'bg-white hover:border-slate-300 border-slate-200'}`}
+                                style={isSelected ? { borderColor: ACCENT } : {}}>
+                                <span className="text-xl">{sg.icon}</span>
+                                <p className="text-[10px] font-black text-slate-700">{sg.name}</p>
+                                <p className="text-[8px] text-slate-400 text-center leading-tight">{sg.desc}</p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+
+                      {/* ③ カラーバリエーション */}
+                      <section>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2.5">
+                          <span className="inline-flex w-5 h-5 rounded-full text-white text-[9px] items-center justify-center mr-1.5" style={{ backgroundColor: ACCENT }}>3</span>
+                          カラーを選ぶ
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {TEMPLATE_PRESETS.filter((p) => p.style === (editingPayload.style || 'standard')).map((tpl) => {
+                            const isSelected = editingPayload.templateId === tpl.id;
+                            return (
+                              <button key={tpl.id}
+                                onClick={() => setPayload((p) => ({
+                                  ...p,
+                                  templateId:   tpl.id,
+                                  colorPrimary: tpl.colorPrimary,
+                                  colorAccent:  tpl.colorAccent,
+                                  textColor:    tpl.textColor,
+                                  bgColor:      tpl.bgColor,
+                                  bgm:          tpl.bgm,
+                                }))}
+                                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 transition-all ${isSelected ? 'bg-rose-50' : 'bg-white hover:border-slate-300 border-slate-200'}`}
+                                style={isSelected ? { borderColor: ACCENT } : {}}>
+                                <div className="flex gap-1">
+                                  <div className="w-5 h-5 rounded-full shadow-sm border border-white/50" style={{ backgroundColor: tpl.colorPrimary }} />
+                                  <div className="w-5 h-5 rounded-full shadow-sm border border-white/50" style={{ backgroundColor: tpl.colorAccent }} />
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-black text-slate-700 leading-none">{tpl.name}</p>
+                                  <p className="text-[9px] text-slate-400 mt-0.5">{tpl.desc}</p>
                                 </div>
                               </button>
                             );
                           })}
-
-                          {/* Add cut button */}
-                          {cuts.length > 0 && (
-                            <button
-                              onClick={addCut}
-                              className="flex-shrink-0 rounded-xl flex flex-col items-center justify-center gap-1 transition-all hover:bg-white/10"
-                              style={{
-                                width: sideLayout ? 80 : 64,
-                                height: sideLayout ? 142 : 80,
-                                border: '2px dashed rgba(255,255,255,0.2)',
-                              }}
-                            >
-                              <Plus size={14} className="text-white/40" />
-                              <span className="text-[8px] text-white/30">追加</span>
-                            </button>
-                          )}
                         </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Cut Timeline */}
-                <div>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase mb-2">カットタイムライン</p>
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
-                    {(editingPayload.cuts || []).map((cut, idx) => (
-                      <div key={cut.id} role="button" tabIndex={0}
-                        onClick={() => setSelectedCutId(cut.id)}
-                        onKeyDown={(e) => e.key === 'Enter' && setSelectedCutId(cut.id)}
-                        className={`flex-shrink-0 w-24 h-20 rounded-xl border-2 relative overflow-hidden transition-all group cursor-pointer ${
-                          cut.id === selectedCutId ? 'border-rose-400' : 'border-slate-200 hover:border-slate-300'
-                        }`}
-                        style={cut.id === selectedCutId ? { borderColor: ACCENT } : {}}>
-                        {cut.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={cut.imageUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                            <span className="text-slate-400 text-[10px]">#{idx + 1}</span>
+                        {/* カラー微調整 */}
+                        <button onClick={() => setShowColor((v) => !v)}
+                          className="flex items-center gap-1 mt-3 text-[10px] text-slate-400 hover:text-slate-600">
+                          {showColorOverride ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                          カラー微調整
+                        </button>
+                        {showColorOverride && (
+                          <div className="mt-2 grid grid-cols-4 gap-2">
+                            {[
+                              { label: 'メイン', key: 'colorPrimary', def: '#1A1A2E' },
+                              { label: 'アクセント', key: 'colorAccent', def: '#E95464' },
+                              { label: 'テキスト', key: 'textColor', def: '#ffffff' },
+                              { label: '背景', key: 'bgColor', def: '#F8F9FA' },
+                            ].map(({ label, key, def }) => (
+                              <div key={key}>
+                                <label className="block text-[10px] font-bold text-slate-400 mb-1">{label}</label>
+                                <input type="color"
+                                  value={(editingPayload as Record<string, unknown>)[key] as string || def}
+                                  onChange={(e) => setPayload((p) => ({ ...p, [key]: e.target.value }))}
+                                  className="w-full h-7 border border-slate-200 rounded cursor-pointer" />
+                              </div>
+                            ))}
                           </div>
                         )}
-                        <div className="absolute bottom-0 inset-x-0 bg-black/50 p-1">
-                          <p className="text-[9px] text-white truncate">{cut.mainText || '(空)'}</p>
-                          <p className="text-[9px] text-white/70">{cut.duration}s</p>
+                      </section>
+
+                      {/* ④ BGM */}
+                      <section>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2.5">
+                          <span className="inline-flex w-5 h-5 rounded-full text-white text-[9px] items-center justify-center mr-1.5" style={{ backgroundColor: ACCENT }}>4</span>
+                          BGMを選ぶ
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {BGM_OPTIONS.map((opt) => {
+                            const isSelected = editingPayload.bgm === opt.value;
+                            return (
+                              <button key={opt.value}
+                                onClick={() => setPayload((p) => ({ ...p, bgm: opt.value }))}
+                                className={`flex items-center justify-between px-3 py-2.5 rounded-xl border-2 transition-all ${isSelected ? 'bg-rose-50' : 'bg-white hover:border-slate-300 border-slate-200'}`}
+                                style={isSelected ? { borderColor: ACCENT } : {}}>
+                                <span className="text-[11px] font-bold text-slate-700">{opt.label}</span>
+                                {isSelected && (
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(e) => { e.stopPropagation(); handleBgmToggle(); }}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleBgmToggle()}
+                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0 cursor-pointer"
+                                    style={{ backgroundColor: bgmPlaying ? '#ef4444' : ACCENT }}>
+                                    {bgmPlaying ? '⏸' : '▶'}
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); removeCut(cut.id); }}
-                          className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white items-center justify-center hidden group-hover:flex">
-                          <X size={8} />
+                      </section>
+
+                      {/* プレビュー */}
+                      {(editingPayload.cuts || []).length > 0 && (
+                        <section>
+                          <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2.5">プレビュー</p>
+                          <div className="rounded-2xl overflow-hidden p-4 flex justify-center"
+                            style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)' }}>
+                            <CutPreviewCard
+                              cut={(editingPayload.cuts || [])[0]}
+                              cutIndex={0}
+                              payload={editingPayload}
+                              size="lg"
+                            />
+                          </div>
+                        </section>
+                      )}
+
+                      <div className="flex justify-end pt-1">
+                        <button onClick={() => setActiveStep(2)}
+                          className="px-6 py-2.5 rounded-xl text-white text-sm font-bold"
+                          style={{ backgroundColor: ACCENT }}>
+                          次へ: コンテンツ編集 →
                         </button>
                       </div>
-                    ))}
-                    <button onClick={addCut}
-                      className="flex-shrink-0 w-12 h-20 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-rose-300 hover:bg-rose-50 transition-colors">
-                      <Plus size={16} className="text-slate-400" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Cut Detail Editor */}
-                {selectedCut && (
-                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    {/* Editor header with mini preview */}
-                    <div className="flex items-stretch gap-0">
-                      {/* Mini live preview strip */}
-                      <div className="flex-shrink-0 p-3 flex items-center justify-center"
-                        style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)', minWidth: 120 }}>
-                        <CutPreviewCard
-                          cut={selectedCut}
-                          cutIndex={(editingPayload.cuts || []).findIndex((c) => c.id === selectedCut.id)}
-                          payload={editingPayload}
-                          size="md"
-                        />
-                      </div>
-                      {/* Title bar */}
-                      <div className="flex-1 flex items-center justify-between px-3 border-b border-slate-100 bg-slate-50/50">
-                        <div>
-                          <p className="text-[11px] font-black text-slate-600 uppercase tracking-wide">カット編集</p>
-                          <p className="text-[10px] text-slate-400">
-                            #{(editingPayload.cuts || []).findIndex((c) => c.id === selectedCut.id) + 1} · {selectedCut.duration}s · {selectedCut.layout}
-                          </p>
-                        </div>
-                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: ACCENT }} title="リアルタイム反映中" />
-                      </div>
                     </div>
-                    <div className="p-4">
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1">メインテキスト</label>
-                          <input value={selectedCut.mainText || ''}
-                            onChange={(e) => updateCut(selectedCut.id, { mainText: e.target.value })}
-                            placeholder="春の新作、解禁。"
-                            className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none"
-                            onFocus={(e) => (e.target.style.boxShadow = `0 0 0 2px ${ACCENT}40`)}
-                            onBlur={(e) => (e.target.style.boxShadow = '')} />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                            {editingPayload.style === 'collage' ? 'ラベル（小テキスト）' : 'サブテキスト'}
-                          </label>
-                          <input value={selectedCut.subText || ''}
-                            onChange={(e) => updateCut(selectedCut.id, { subText: e.target.value })}
-                            placeholder={editingPayload.style === 'collage' ? 'スタッフ募集のお知らせ' : '3日間限定オファー'}
-                            className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none"
-                            onFocus={(e) => (e.target.style.boxShadow = `0 0 0 2px ${ACCENT}40`)}
-                            onBlur={(e) => (e.target.style.boxShadow = '')} />
-                        </div>
-                        {editingPayload.style === 'collage' && (
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-500 mb-1">キャプション（下部）</label>
-                            <input value={selectedCut.caption || ''}
-                              onChange={(e) => updateCut(selectedCut.id, { caption: e.target.value })}
-                              placeholder="詳細・ご応募はこちら"
-                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none"
-                              onFocus={(e) => (e.target.style.boxShadow = `0 0 0 2px ${ACCENT}40`)}
-                              onBlur={(e) => (e.target.style.boxShadow = '')} />
-                          </div>
-                        )}
+                  )}
+
+                  {/* ════════ STEP 2: コンテンツ編集 ════════ */}
+                  {activeStep === 2 && (
+                    <div className="p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                          カット一覧（{(editingPayload.cuts || []).length}カット・{totalDurationSec}秒）
+                        </p>
+                        <button onClick={handleGenerate} disabled={isGenerating || !selectedCustomer}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold disabled:opacity-50"
+                          style={{ backgroundColor: ACCENT }}>
+                          {isGenerating ? <><Loader2 size={10} className="animate-spin" /> 生成中...</> : '🤖 AI自動生成'}
+                        </button>
                       </div>
 
-                      <div className="grid grid-cols-4 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1">尺: {selectedCut.duration}s</label>
-                          <input type="range" min={1} max={10} value={selectedCut.duration}
-                            onChange={(e) => updateCut(selectedCut.id, { duration: Number(e.target.value) })}
-                            className="w-full accent-rose-400" />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1">レイアウト</label>
-                          <select value={selectedCut.layout || 'bottom'}
-                            onChange={(e) => updateCut(selectedCut.id, { layout: e.target.value })}
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none">
-                            {LAYOUT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1">トランジション</label>
-                          <select value={selectedCut.transition || 'fade'}
-                            onChange={(e) => updateCut(selectedCut.id, { transition: e.target.value })}
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none">
-                            {TRANSITION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1">アニメーション</label>
-                          <select value={selectedCut.animation || 'slide'}
-                            onChange={(e) => updateCut(selectedCut.id, { animation: e.target.value })}
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none">
-                            {ANIMATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </div>
-                      </div>
-
-                      {editingPayload.style === 'collage' ? (
-                        /* ── Collage: 2×2 グリッド画像選択 ──────────────── */
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1.5">
-                            グリッド画像（最大4枚）
-                          </label>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {[0, 1, 2, 3].map((slot) => {
-                              const imgs = selectedCut.images || [];
-                              const url  = imgs[slot] || null;
-                              return (
-                                <div key={slot} className="relative group">
-                                  <button
-                                    onClick={() => { setMediaSlot(slot); setShowMedia(true); }}
-                                    className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 hover:border-slate-400 overflow-hidden bg-slate-50 flex items-center justify-center transition-colors">
-                                    {url ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={url} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                      <span className="text-slate-400 text-[10px]">#{slot + 1}</span>
-                                    )}
-                                  </button>
-                                  {url && (
-                                    <button
-                                      onClick={() => {
-                                        const newImgs = [...(selectedCut.images || [])];
-                                        newImgs[slot] = '';
-                                        updateCut(selectedCut.id, { images: newImgs });
-                                      }}
-                                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] items-center justify-center hidden group-hover:flex">
-                                      ×
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            })}
+                      {(editingPayload.cuts || []).length === 0 ? (
+                        <div className="text-center py-10 bg-white rounded-xl border-2 border-dashed border-slate-200">
+                          <p className="text-sm text-slate-400 mb-4">まだカットがありません</p>
+                          <div className="flex justify-center gap-2">
+                            <button onClick={addCut}
+                              className="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                              + 手動で追加
+                            </button>
+                            <button onClick={handleGenerate} disabled={isGenerating || !selectedCustomer}
+                              className="px-4 py-2 rounded-xl text-white text-sm font-bold disabled:opacity-50"
+                              style={{ backgroundColor: ACCENT }}>
+                              🤖 AIで自動生成
+                            </button>
                           </div>
                         </div>
                       ) : (
-                        /* ── Standard: 単一画像選択 ──────────────────────── */
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1">画像</label>
+                        <div className="space-y-2">
+                          {(editingPayload.cuts || []).map((cut, idx) => {
+                            const isActive = cut.id === selectedCutId;
+                            return (
+                              <div key={cut.id}
+                                className={`bg-white rounded-xl border-2 overflow-hidden transition-all ${isActive ? '' : 'border-slate-200'}`}
+                                style={isActive ? { borderColor: ACCENT } : {}}>
+
+                                {/* Card header */}
+                                <button
+                                  onClick={() => setSelectedCutId(isActive ? null : cut.id)}
+                                  className="w-full flex items-center gap-3 p-3 text-left">
+                                  {/* Mini preview */}
+                                  <div className="flex-shrink-0 w-10 h-16 rounded-lg overflow-hidden"
+                                    style={{ background: `linear-gradient(145deg, ${editingPayload.colorPrimary || '#1a1a2e'} 0%, ${editingPayload.colorAccent || '#e95464'}55 100%)` }}>
+                                    {cut.imageUrl && (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={cut.imageUrl} alt="" className="w-full h-full object-cover" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-white flex-shrink-0"
+                                        style={{ backgroundColor: isActive ? ACCENT : '#94a3b8' }}>
+                                        {idx + 1}
+                                      </span>
+                                      <p className="text-xs font-bold text-slate-700 truncate">{cut.mainText || '(テキストなし)'}</p>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 ml-7 mt-0.5 truncate">{cut.subText || ''}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className="text-[10px] text-slate-400">{cut.duration}s</span>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); removeCut(cut.id); }}
+                                      className="w-5 h-5 rounded-full bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors">
+                                      <X size={10} />
+                                    </button>
+                                    {isActive ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+                                  </div>
+                                </button>
+
+                                {/* Expanded form */}
+                                {isActive && (
+                                  <div className="px-3 pb-3 border-t border-slate-100 pt-3 space-y-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">メインテキスト</label>
+                                        <input value={cut.mainText || ''}
+                                          onChange={(e) => updateCut(cut.id, { mainText: e.target.value })}
+                                          placeholder="春の新作、解禁。"
+                                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none"
+                                          onFocus={(e) => (e.target.style.boxShadow = `0 0 0 2px ${ACCENT}40`)}
+                                          onBlur={(e) => (e.target.style.boxShadow = '')} />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                                          {editingPayload.style === 'collage' ? 'ラベル' : 'サブテキスト'}
+                                        </label>
+                                        <input value={cut.subText || ''}
+                                          onChange={(e) => updateCut(cut.id, { subText: e.target.value })}
+                                          placeholder="3日間限定オファー"
+                                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none"
+                                          onFocus={(e) => (e.target.style.boxShadow = `0 0 0 2px ${ACCENT}40`)}
+                                          onBlur={(e) => (e.target.style.boxShadow = '')} />
+                                      </div>
+                                    </div>
+
+                                    {/* Image */}
+                                    {editingPayload.style === 'collage' ? (
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1.5">グリッド画像（最大4枚）</label>
+                                        <div className="grid grid-cols-4 gap-1.5">
+                                          {[0, 1, 2, 3].map((slot) => {
+                                            const url = (cut.images || [])[slot] || null;
+                                            return (
+                                              <div key={slot} className="relative group">
+                                                <button
+                                                  onClick={() => { setMediaSlot(slot); setShowMedia(true); }}
+                                                  className="w-full aspect-square rounded-lg border-2 border-dashed border-slate-200 hover:border-slate-400 overflow-hidden bg-slate-50 flex items-center justify-center transition-colors">
+                                                  {url ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={url} alt="" className="w-full h-full object-cover" />
+                                                  ) : (
+                                                    <span className="text-slate-400 text-[10px]">#{slot + 1}</span>
+                                                  )}
+                                                </button>
+                                                {url && (
+                                                  <button
+                                                    onClick={() => {
+                                                      const newImgs = [...(cut.images || [])];
+                                                      newImgs[slot] = '';
+                                                      updateCut(cut.id, { images: newImgs });
+                                                    }}
+                                                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] items-center justify-center hidden group-hover:flex">
+                                                    ×
+                                                  </button>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">画像</label>
+                                        <div className="flex items-center gap-2">
+                                          {cut.imageUrl && (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={cut.imageUrl} alt="" className="w-10 h-10 object-cover rounded-lg border border-slate-200" />
+                                          )}
+                                          <button onClick={() => { setMediaSlot(0); setShowMedia(true); }}
+                                            className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                            {cut.imageUrl ? '画像を変更' : '画像を選択'}
+                                          </button>
+                                          {cut.imageUrl && (
+                                            <button onClick={() => updateCut(cut.id, { imageUrl: null })}
+                                              className="px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-500 hover:bg-red-50">
+                                              削除
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Live preview */}
+                                    <div className="rounded-xl overflow-hidden flex justify-center py-3"
+                                      style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)' }}>
+                                      <CutPreviewCard cut={cut} cutIndex={idx} payload={editingPayload} size="lg" />
+                                    </div>
+
+                                    {/* Advanced */}
+                                    <details className="group">
+                                      <summary className="cursor-pointer text-[10px] font-bold text-slate-400 hover:text-slate-600 list-none flex items-center gap-1">
+                                        <ChevronDown size={10} className="group-open:rotate-180 transition-transform" />
+                                        詳細設定（尺・レイアウト・トランジション・アニメ）
+                                      </summary>
+                                      <div className="mt-2 grid grid-cols-4 gap-2">
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-400 mb-1">尺: {cut.duration}s</label>
+                                          <input type="range" min={1} max={10} value={cut.duration}
+                                            onChange={(e) => updateCut(cut.id, { duration: Number(e.target.value) })}
+                                            className="w-full accent-rose-400" />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-400 mb-1">レイアウト</label>
+                                          <select value={cut.layout || 'bottom'}
+                                            onChange={(e) => updateCut(cut.id, { layout: e.target.value })}
+                                            className="w-full px-1.5 py-1 border border-slate-200 rounded text-[10px] outline-none bg-white">
+                                            {LAYOUT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-400 mb-1">トランジション</label>
+                                          <select value={cut.transition || 'fade'}
+                                            onChange={(e) => updateCut(cut.id, { transition: e.target.value })}
+                                            className="w-full px-1.5 py-1 border border-slate-200 rounded text-[10px] outline-none bg-white">
+                                            {TRANSITION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-bold text-slate-400 mb-1">アニメ</label>
+                                          <select value={cut.animation || 'slide'}
+                                            onChange={(e) => updateCut(cut.id, { animation: e.target.value })}
+                                            className="w-full px-1.5 py-1 border border-slate-200 rounded text-[10px] outline-none bg-white">
+                                            {ANIMATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                          </select>
+                                        </div>
+                                      </div>
+                                    </details>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {(editingPayload.cuts || []).length > 0 && (
+                        <button onClick={addCut}
+                          className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-sm text-slate-400 font-medium hover:border-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center gap-1">
+                          <Plus size={14} /> カットを追加
+                        </button>
+                      )}
+
+                      <div className="flex justify-between pt-1">
+                        <button onClick={() => setActiveStep(1)}
+                          className="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                          ← スタイル選択に戻る
+                        </button>
+                        <button onClick={() => setActiveStep(3)}
+                          className="px-6 py-2.5 rounded-xl text-white text-sm font-bold"
+                          style={{ backgroundColor: ACCENT }}>
+                          次へ: 出力・公開 →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ════════ STEP 3: 出力・公開 ════════ */}
+                  {activeStep === 3 && (
+                    <div className="p-5 space-y-4">
+
+                      {/* サマリー */}
+                      <div className="bg-white rounded-xl border border-slate-200 p-4">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-3">動画サマリー</p>
+                        <div className="flex items-start gap-4">
+                          <div className="rounded-xl overflow-hidden flex-shrink-0"
+                            style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)', padding: 10 }}>
+                            <CutPreviewCard
+                              cut={(editingPayload.cuts || [])[0] || null}
+                              cutIndex={0}
+                              payload={editingPayload}
+                              size="md"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <p className="text-[10px] text-slate-400">タイトル</p>
+                              <p className="text-sm font-bold text-slate-700">{editingPayload.title || '無題の動画'}</p>
+                            </div>
+                            <div className="flex gap-4">
+                              <div>
+                                <p className="text-[10px] text-slate-400">スタイル</p>
+                                <p className="text-xs font-bold text-slate-700 uppercase">{editingPayload.style || 'standard'}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-slate-400">投稿先</p>
+                                <p className="text-xs font-bold text-slate-700">{DESTINATION_OPTIONS.find((o) => o.value === editingPayload.destination)?.label || editingPayload.destination}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-4">
+                              <div>
+                                <p className="text-[10px] text-slate-400">カット数</p>
+                                <p className="text-xs font-bold text-slate-700">{(editingPayload.cuts || []).length}カット</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-slate-400">合計尺</p>
+                                <p className="text-xs font-bold text-slate-700">{totalDurationSec}秒</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* レンダリング */}
+                      <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">レンダリング</p>
+
+                        <button onClick={() => handleRender('preview')} disabled={isRendering || !selectedJobId}
+                          className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors">
+                          {isRendering ? <><Loader2 size={14} className="animate-spin" /> 処理中...</> : '👁 プレビュー動画を生成'}
+                        </button>
+
+                        <button onClick={() => handleRender('final')} disabled={isRendering || !selectedJobId}
+                          className="w-full py-3 rounded-xl bg-slate-700 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors">
+                          🎬 最終レンダリング（高画質）
+                        </button>
+
+                        {renderProgress && (
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-[10px] text-slate-500">
+                              <span>{renderProgress.label}</span>
+                              <span>{renderProgress.current} / {renderProgress.total}</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                              <div className="h-2.5 rounded-full transition-all duration-700"
+                                style={{
+                                  width: `${renderProgress.total > 0 ? Math.round((renderProgress.current / renderProgress.total) * 100) : 0}%`,
+                                  backgroundColor: ACCENT,
+                                }} />
+                            </div>
+                          </div>
+                        )}
+
+                        {opMessage && (
+                          <p className="text-xs text-center font-medium" style={{ color: ACCENT }}>{opMessage}</p>
+                        )}
+                      </div>
+
+                      {/* 配布・公開 */}
+                      {previewUrl && selectedJobId && (
+                        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+                          <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">配布・公開</p>
                           <div className="flex items-center gap-2">
-                            {selectedCut.imageUrl && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={selectedCut.imageUrl} alt="cut" className="w-12 h-12 object-cover rounded-lg border border-slate-200" />
-                            )}
-                            <button onClick={() => { setMediaSlot(0); setShowMedia(true); }}
-                              className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                              画像を選択
+                            <button
+                              onClick={() => {
+                                const url = `${window.location.origin}/preview/${selectedJobId}`;
+                                navigator.clipboard.writeText(url);
+                                setOpMessage('お客様確認URLをコピーしました');
+                                setTimeout(() => setOpMessage(''), 3000);
+                              }}
+                              className="flex-1 py-2 rounded-xl border text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-rose-50 transition-colors"
+                              style={{ borderColor: ACCENT, color: ACCENT }}>
+                              <Copy size={13} /> お客様確認URLをコピー
                             </button>
-                            {selectedCut.imageUrl && (
-                              <button onClick={() => updateCut(selectedCut.id, { imageUrl: null })}
-                                className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-red-500 hover:bg-red-50">
-                                削除
-                              </button>
-                            )}
+                            <a href={`/preview/${selectedJobId}`} target="_blank" rel="noopener noreferrer"
+                              className="p-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors">
+                              <ExternalLink size={16} />
+                            </a>
+                          </div>
+                          <a href={previewUrl} download
+                            className="w-full py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition-colors">
+                            <Download size={13} /> MP4ダウンロード
+                          </a>
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <button disabled className="py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-400 flex items-center justify-center gap-1 cursor-not-allowed">
+                              <Youtube size={12} /> YouTube投稿
+                            </button>
+                            <button disabled className="py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-400 flex items-center justify-center gap-1 cursor-not-allowed">
+                              <Link2 size={12} /> pal_studio連携
+                            </button>
                           </div>
                         </div>
                       )}
-                    </div>
-                    </div>
-                  </div>
-                )}
 
-                {/* Hearing inline (collapsible) */}
-                {hasHearing && (
-                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <button
-                      onClick={() => setShowInline((v) => !v)}
-                      className="w-full flex items-center justify-between p-3 text-left hover:bg-slate-50">
-                      <div className="flex items-center gap-1.5">
-                        <MessageCircle size={12} style={{ color: ACCENT }} />
-                        <p className="text-[11px] font-bold text-slate-500 uppercase">ヒアリング概要</p>
-                      </div>
-                      {showHearingInline ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
-                    {showHearingInline && (
-                      <div className="px-3 pb-3 space-y-1.5 max-h-48 overflow-y-auto">
-                        {(editingPayload.hearingAnswers || [])
-                          .filter((qa) => qa.a && qa.a !== '••••••')
-                          .map((qa, idx) => (
-                            <div key={idx} className="text-[11px]">
-                              <p className="text-slate-400 mb-0.5">Q: {qa.q.slice(0, 60)}{qa.q.length > 60 ? '…' : ''}</p>
-                              <p className="text-slate-700 font-medium pl-2 border-l-2" style={{ borderColor: ACCENT }}>
-                                {qa.a}
-                              </p>
+                      {/* ヒアリング内容 */}
+                      {hasHearing && (
+                        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                          <button onClick={() => setShowInline((v) => !v)}
+                            className="w-full flex items-center justify-between p-3 text-left hover:bg-slate-50">
+                            <div className="flex items-center gap-1.5">
+                              <MessageCircle size={12} style={{ color: ACCENT }} />
+                              <p className="text-[11px] font-bold text-slate-500 uppercase">ヒアリング内容</p>
                             </div>
-                          ))}
+                            {showHearingInline ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </button>
+                          {showHearingInline && (
+                            <div className="px-3 pb-3 space-y-1.5 max-h-48 overflow-y-auto">
+                              {(editingPayload.hearingAnswers || [])
+                                .filter((qa) => qa.a && qa.a !== '••••••')
+                                .map((qa, idx) => (
+                                  <div key={idx} className="text-[11px]">
+                                    <p className="text-slate-400 mb-0.5">Q: {qa.q.slice(0, 60)}{qa.q.length > 60 ? '…' : ''}</p>
+                                    <p className="text-slate-700 font-medium pl-2 border-l-2" style={{ borderColor: ACCENT }}>{qa.a}</p>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex justify-start pt-1">
+                        <button onClick={() => setActiveStep(2)}
+                          className="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                          ← コンテンツ編集に戻る
+                        </button>
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+
+                </div>{/* end step content */}
               </div>
             ) : null}
           </>
@@ -1695,9 +1619,9 @@ export default function AdminPage() {
       </main>
 
       {/* ── RIGHT PANEL ──────────────────────────────────────────── */}
-      <aside className="w-80 border-l border-slate-200 bg-white flex flex-col flex-shrink-0 overflow-y-auto custom-scrollbar">
+      <aside className="w-60 border-l border-slate-200 bg-white flex flex-col flex-shrink-0 overflow-y-auto custom-scrollbar">
 
-        {/* ── 動画設定 ─────────────────────────────────────── */}
+        {/* 動画設定 */}
         <div className="p-4 border-b border-slate-100">
           <p className="text-[11px] font-bold text-slate-500 uppercase mb-3">動画設定</p>
           <div className="space-y-2.5">
@@ -1710,227 +1634,87 @@ export default function AdminPage() {
                 onFocus={(e) => (e.target.style.boxShadow = `0 0 0 2px ${ACCENT}40`)}
                 onBlur={(e) => (e.target.style.boxShadow = '')} />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">用途</label>
-                <select value={editingPayload.purpose || 'promotion'}
-                  onChange={(e) => setPayload((p) => ({ ...p, purpose: e.target.value }))}
-                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none bg-white">
-                  {PURPOSE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">尺</label>
-                <select value={editingPayload.duration || 30}
-                  onChange={(e) => setPayload((p) => ({ ...p, duration: Number(e.target.value) }))}
-                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none bg-white">
-                  {DURATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">用途</label>
+              <select value={editingPayload.purpose || 'promotion'}
+                onChange={(e) => setPayload((p) => ({ ...p, purpose: e.target.value }))}
+                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none bg-white">
+                {PURPOSE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                投稿先
-                {destDimsLabel && (
-                  <span className="ml-1.5 text-[9px] font-normal text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{destDimsLabel}</span>
-                )}
-              </label>
-              <select value={editingPayload.destination || 'instagram_reel'}
-                onChange={(e) => setPayload((p) => ({ ...p, destination: e.target.value }))}
-                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-sm outline-none bg-white">
-                {DESTINATION_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label} ({o.dims})</option>
-                ))}
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">尺</label>
+              <select value={editingPayload.duration || 30}
+                onChange={(e) => setPayload((p) => ({ ...p, duration: Number(e.target.value) }))}
+                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs outline-none bg-white">
+                {DURATION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
           </div>
         </div>
 
-        {/* ── テンプレート選択 ──────────────────────────────── */}
-        <div className="p-4 border-b border-slate-100">
-          <p className="text-[11px] font-bold text-slate-500 uppercase mb-2">テンプレート</p>
-          {(() => {
-            const recommended = PURPOSE_TEMPLATE_DEFAULTS[editingPayload.purpose || 'promotion'] || [];
-            return (
-              <div className="grid grid-cols-2 gap-1.5">
-                {TEMPLATE_PRESETS.map((tpl) => {
-                  const isSelected = (editingPayload.templateId || 'modern') === tpl.id;
-                  const isRecommended = recommended.includes(tpl.id);
-                  return (
-                    <button
-                      key={tpl.id}
-                      onClick={() => setPayload((p) => ({
-                        ...p,
-                        templateId:   tpl.id,
-                        colorPrimary: tpl.colorPrimary,
-                        colorAccent:  tpl.colorAccent,
-                        textColor:    tpl.textColor,
-                        bgColor:      tpl.bgColor,
-                        style:        tpl.style,
-                        bgm:          tpl.bgm,
-                      }))}
-                      className={`relative rounded-xl p-2.5 text-left border-2 transition-all ${
-                        isSelected
-                          ? 'border-rose-400 bg-rose-50'
-                          : 'border-slate-200 hover:border-slate-300 bg-white'
-                      }`}
-                      style={isSelected ? { borderColor: ACCENT } : {}}>
-                      {/* Color swatches */}
-                      <div className="flex gap-1 mb-1.5">
-                        <div className="w-5 h-5 rounded-full border border-white/50 shadow-sm flex-shrink-0"
-                          style={{ backgroundColor: tpl.colorPrimary }} />
-                        <div className="w-5 h-5 rounded-full border border-white/50 shadow-sm flex-shrink-0"
-                          style={{ backgroundColor: tpl.colorAccent }} />
-                        {isRecommended && (
-                          <span className="ml-auto text-[8px] font-bold px-1 rounded"
-                            style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}>
-                            ★
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] font-black text-slate-800 leading-none">{tpl.name}</p>
-                      <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">{tpl.desc}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
-
-          {/* カラー調整（折りたたみ） */}
-          <button
-            onClick={() => setShowColor((v) => !v)}
-            className="w-full flex items-center justify-between mt-2.5 pt-2.5 border-t border-slate-100 text-[11px] font-bold text-slate-400 hover:text-slate-600">
-            カラー微調整
-            {showColorOverride ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          </button>
-          {showColorOverride && (
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1">メイン</label>
-                <input type="color" value={editingPayload.colorPrimary || '#1A1A2E'}
-                  onChange={(e) => setPayload((p) => ({ ...p, colorPrimary: e.target.value }))}
-                  className="w-full h-7 border border-slate-200 rounded cursor-pointer" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1">アクセント</label>
-                <input type="color" value={editingPayload.colorAccent || '#E95464'}
-                  onChange={(e) => setPayload((p) => ({ ...p, colorAccent: e.target.value }))}
-                  className="w-full h-7 border border-slate-200 rounded cursor-pointer" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1">テキスト</label>
-                <input type="color" value={editingPayload.textColor || '#ffffff'}
-                  onChange={(e) => setPayload((p) => ({ ...p, textColor: e.target.value }))}
-                  className="w-full h-7 border border-slate-200 rounded cursor-pointer" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1">背景色</label>
-                <input type="color" value={editingPayload.bgColor || '#F8F9FA'}
-                  onChange={(e) => setPayload((p) => ({ ...p, bgColor: e.target.value }))}
-                  className="w-full h-7 border border-slate-200 rounded cursor-pointer" />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-[10px] font-bold text-slate-400 mb-1">BGM</label>
-                <select value={editingPayload.bgm || 'cool_minimal'}
-                  onChange={(e) => setPayload((p) => ({ ...p, bgm: e.target.value }))}
-                  className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs outline-none bg-white">
-                  {BGM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
+        {/* ステータス・進捗バッジ */}
+        {selectedJob && (
+          <div className="px-4 py-2.5 border-b border-slate-100 space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_LABELS[selectedJob.status]?.color || 'bg-slate-100 text-slate-600'}`}>
+                {STATUS_LABELS[selectedJob.status]?.label || selectedJob.status}
+              </span>
+              <span className="text-[10px] text-slate-400">
+                {(editingPayload.cuts || []).length}カット · {totalDurationSec}秒
+              </span>
             </div>
+            {/* Style badge */}
+            {editingPayload.style && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded uppercase"
+                  style={{ backgroundColor: `${ACCENT}20`, color: ACCENT }}>
+                  {editingPayload.style}
+                </span>
+                <div className="flex gap-1">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: editingPayload.colorPrimary || '#1A1A2E' }} />
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: editingPayload.colorAccent || ACCENT }} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 保存 */}
+        <div className="p-4 space-y-2">
+          <button onClick={handleSave} disabled={isSaving || !selectedCustomer}
+            className="w-full py-2.5 rounded-xl text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ backgroundColor: ACCENT }}>
+            {isSaving ? <><Loader2 size={14} className="animate-spin" /> 保存中...</> : '💾 保存する'}
+          </button>
+
+          {opMessage && !isRendering && (
+            <p className="text-xs text-center font-medium" style={{ color: ACCENT }}>{opMessage}</p>
           )}
         </div>
 
-        {/* Operations */}
-        <div className="p-4 space-y-2">
-          <p className="text-[11px] font-bold text-slate-500 uppercase mb-3">操作</p>
-
-          <button onClick={handleGenerate} disabled={isGenerating || !selectedCustomer}
-            className="w-full py-2 rounded-xl text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ backgroundColor: ACCENT }}>
-            {isGenerating ? <><Loader2 size={14} className="animate-spin" /> 生成中...</> : '🤖 AIでカットを自動生成'}
+        {/* ステップ別クイックアクション */}
+        <div className="px-4 pb-4 space-y-1 border-t border-slate-100 pt-3">
+          <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">クイックアクション</p>
+          <button onClick={() => setActiveStep(1)}
+            className={`w-full py-1.5 rounded-lg text-[11px] font-bold text-left px-3 transition-colors ${activeStep === 1 ? 'text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+            style={activeStep === 1 ? { backgroundColor: ACCENT } : {}}>
+            🎨 スタイル選択
           </button>
-
-          <button onClick={() => handleRender('preview')} disabled={isRendering || !selectedJobId}
-            className="w-full py-2 rounded-xl bg-blue-600 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
-            {isRendering ? <><Loader2 size={14} className="animate-spin" /> 処理中...</> : '👁 プレビュー生成'}
+          <button onClick={() => setActiveStep(2)}
+            className={`w-full py-1.5 rounded-lg text-[11px] font-bold text-left px-3 transition-colors ${activeStep === 2 ? 'text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+            style={activeStep === 2 ? { backgroundColor: ACCENT } : {}}>
+            ✏️ コンテンツ編集
           </button>
-
-          <button onClick={() => handleRender('final')} disabled={isRendering || !selectedJobId}
-            className="w-full py-2 rounded-xl bg-slate-700 text-white text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
-            🎬 最終レンダリング
+          <button onClick={() => setActiveStep(3)}
+            className={`w-full py-1.5 rounded-lg text-[11px] font-bold text-left px-3 transition-colors ${activeStep === 3 ? 'text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+            style={activeStep === 3 ? { backgroundColor: ACCENT } : {}}>
+            🚀 出力・公開
           </button>
-
-          <button onClick={handleSave} disabled={isSaving || !selectedCustomer}
-            className="w-full py-2 rounded-xl border border-slate-300 text-slate-700 text-sm font-bold disabled:opacity-50 hover:bg-slate-50 flex items-center justify-center gap-2">
-            {isSaving ? <><Loader2 size={14} className="animate-spin" /> 保存中...</> : '💾 保存'}
-          </button>
-
-          {renderProgress && (
-            <div className="space-y-1">
-              <div className="flex justify-between text-[10px] text-slate-500">
-                <span>{renderProgress.label}</span>
-                <span>{renderProgress.current} / {renderProgress.total}</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                <div
-                  className="h-2 rounded-full transition-all duration-700"
-                  style={{
-                    width: `${renderProgress.total > 0 ? Math.round((renderProgress.current / renderProgress.total) * 100) : 0}%`,
-                    backgroundColor: ACCENT,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {opMessage && (
-            <p className="text-xs text-center font-medium" style={{ color: ACCENT }}>{opMessage}</p>
-          )}
-
-          {previewUrl && selectedJobId && (
-            <div className="pt-2 space-y-2">
-              {/* お客様確認URL */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const url = `${window.location.origin}/preview/${selectedJobId}`;
-                    navigator.clipboard.writeText(url);
-                    setOpMessage('お客様確認URLをコピーしました');
-                    setTimeout(() => setOpMessage(''), 3000);
-                  }}
-                  className="flex-1 py-1.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1"
-                  style={{ borderColor: ACCENT, color: ACCENT }}>
-                  <Copy size={12} /> お客様確認URLをコピー
-                </button>
-                <a href={`/preview/${selectedJobId}`} target="_blank" rel="noopener noreferrer"
-                  className="p-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50">
-                  <ExternalLink size={14} />
-                </a>
-              </div>
-              {/* MP4ダウンロード */}
-              <a href={previewUrl} download
-                className="w-full py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1">
-                <Download size={12} /> MP4ダウンロード
-              </a>
-            </div>
-          )}
-
-          <div className="pt-2 space-y-1.5 border-t border-slate-100 mt-2">
-            <button disabled
-              className="w-full py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-400 flex items-center justify-center gap-1 cursor-not-allowed">
-              <Youtube size={12} /> YouTubeに投稿 (Phase 7)
-            </button>
-            <button disabled
-              className="w-full py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-400 flex items-center justify-center gap-1 cursor-not-allowed">
-              <Link2 size={12} /> pal_studioに連携 (Coming)
-            </button>
-          </div>
         </div>
       </aside>
 
-      {/* Hearing Chat Modal */}
+      {/* Hearing Modal */}
       {showHearingModal && (
         <HearingModal payload={editingPayload} onClose={() => setShowHearing(false)} />
       )}
