@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getJobsByPaletteId, getJobById, createJob, updateJob, type CreateJobData } from '../../_lib/pal-video-store';
 
+// Render.com コールドスタート対応: Vercel 関数タイムアウト60秒
+export const maxDuration = 60;
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);

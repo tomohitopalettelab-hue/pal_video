@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import type { PalVideoCut } from '../_lib/pal-video-store';
 
+export const maxDuration = 60;
+
 type GenerateBody = {
   paletteId: string;
   jobId?: string;

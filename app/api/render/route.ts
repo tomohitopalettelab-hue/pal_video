@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getJobById, updateJob } from '../_lib/pal-video-store';
 import { palDbPost, palDbGet } from '../_lib/pal-db-client';
 
+export const maxDuration = 60;
+
 type RenderBody = {
   jobId: string;
   mode: 'preview' | 'final';

@@ -85,6 +85,7 @@ const mapJobFromApi = (raw: Record<string, unknown>): PalVideoJob => {
 export const getJobsByPaletteId = async (paletteId: string, limit = 20): Promise<PalVideoJob[]> => {
   const res = await palDbGet(
     `/api/pal-video/jobs?palette_id=${encodeURIComponent(paletteId)}&limit=${limit}`,
+    { timeoutMs: 30000 },
   );
   if (!res.ok) return [];
   const body = await res.json().catch(() => ({}));
@@ -93,8 +94,13 @@ export const getJobsByPaletteId = async (paletteId: string, limit = 20): Promise
 };
 
 export const getJobById = async (id: string): Promise<PalVideoJob | null> => {
-  const res = await palDbGet(`/api/pal-video/jobs/${encodeURIComponent(id)}`);
-  if (!res.ok) return null;
+  // Render.com フリーティアのコールドスタート対応: 30秒タイムアウト
+  const res = await palDbGet(`/api/pal-video/jobs/${encodeURIComponent(id)}`, { timeoutMs: 30000 });
+  if (!res.ok) {
+    // pal_db が非OK を返した場合、実際のステータスとエラーをスローして上位に伝える
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(`pal_db GET jobs/${id} returned ${res.status}: ${errBody?.error || '(no message)'}`);
+  }
   const body = await res.json().catch(() => ({}));
   const raw = body?.job || body;
   if (!raw?.id) return null;
@@ -122,7 +128,7 @@ export const createJob = async (data: CreateJobData): Promise<PalVideoJob | null
   };
   if (data.id) body.id = data.id;
 
-  const res = await palDbPost('/api/pal-video/jobs', body);
+  const res = await palDbPost('/api/pal-video/jobs', body, { timeoutMs: 30000 });
   if (!res.ok) return null;
   const resBody = await res.json().catch(() => ({}));
   const raw = resBody?.job || resBody;
@@ -139,7 +145,7 @@ export const updateJob = async (id: string, data: Partial<CreateJobData>): Promi
   if (data.previewUrl !== undefined) body.preview_url = data.previewUrl;
   if (data.youtubeUrl !== undefined) body.youtube_url = data.youtubeUrl;
 
-  const res = await palDbPost('/api/pal-video/jobs', body);
+  const res = await palDbPost('/api/pal-video/jobs', body, { timeoutMs: 30000 });
   if (!res.ok) return null;
   const resBody = await res.json().catch(() => ({}));
   const raw = resBody?.job || resBody;

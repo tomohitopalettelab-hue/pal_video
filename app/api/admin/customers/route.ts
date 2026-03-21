@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { listPalVideoAccountsFromPalDb } from '../../_lib/pal-video-accounts';
 
+export const maxDuration = 60;
+
 export async function GET() {
   try {
     const accounts = await listPalVideoAccountsFromPalDb();

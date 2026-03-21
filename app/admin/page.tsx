@@ -815,7 +815,10 @@ export default function AdminPage() {
     setIsRendering(true);
     setOpMessage(mode === 'preview' ? 'プレビューを生成中...' : '最終レンダリング中...');
     try {
-      await handleSave();
+      // リトライ時は handleSave をスキップ:
+      // handleSave が status:'draft' で上書きすると、pal_db が 'レンダリング中' に更新する前に
+      // ポーリングが 'draft' を検知してしまい「サーバーが再起動しました。」が誤発火する
+      if (_retryCount === 0) await handleSave();
       const res  = await fetch('/api/render', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId: selectedJobId, mode }),
@@ -832,7 +835,10 @@ export default function AdminPage() {
         setRenderProgress({ current: 0, total: 1, label: '準備中...' });
         const jobIdToPoll = selectedJobId;
         const maxPollMs = mode === 'preview' ? 600000 : 7200000;
-        const staleMs   = mode === 'preview' ? 120000  : 600000;
+        // staleMs: プログレス更新が途絶えた場合のタイムアウト
+        // preview=2分、final=30分（フル解像度1カットが10分超かかる場合に備え余裕を持たせる）
+        const staleMs   = mode === 'preview' ? 120000  : 1800000;
+        const renderStartedAtMs = Date.now();
         let lastProgressLabel = '';
         let lastProgressAt = Date.now();
         const poll = setInterval(async () => {
@@ -843,7 +849,10 @@ export default function AdminPage() {
             const prog    = job?.payload?.['renderProgress'] as { current: number; total: number; label: string } | undefined;
             if (prog) {
               setRenderProgress({ current: prog.current, total: prog.total, label: prog.label });
-              if (prog.label !== lastProgressLabel) { lastProgressLabel = prog.label; lastProgressAt = Date.now(); }
+              // ラベルが同じでもプログレスを受信できた＝pal_dbが生きている証拠
+              // 常に lastProgressAt をリセットして誤スタールを防ぐ
+              lastProgressLabel = prog.label;
+              lastProgressAt = Date.now();
             }
             if (job?.previewUrl) {
               clearInterval(poll);
@@ -858,7 +867,13 @@ export default function AdminPage() {
               const errMsg = (job?.payload?.['renderError'] as string) || '不明なエラー';
               setOpMessage(`⚠️ レンダリングエラー: ${errMsg}`);
               setIsRendering(false);
-            } else if (String(job?.status) === 'draft' && _retryCount < 2) {
+            } else if (
+              String(job?.status) === 'draft' &&
+              // pal_db の setImmediate が 'レンダリング中' に更新するまで30秒以上待つ
+              // （開始直後に draft が見えても誤検知しないようにする）
+              Date.now() - renderStartedAtMs > 30000 &&
+              _retryCount < 2
+            ) {
               clearInterval(poll);
               setRenderProgress(null);
               const retryNum = _retryCount + 1;
@@ -876,7 +891,10 @@ export default function AdminPage() {
                 setIsRendering(false);
               }
             }
-          } catch { /* ポーリング中の一時エラーは無視 */ }
+          } catch (pollErr) {
+            // ポーリングエラーはコンソールに出力して診断を助ける（UIには表示しない）
+            console.warn('[render poll] error:', pollErr instanceof Error ? pollErr.message : pollErr);
+          }
         }, 4000);
         setTimeout(() => {
           clearInterval(poll);
