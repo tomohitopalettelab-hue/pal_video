@@ -9,9 +9,9 @@ export async function GET(req: NextRequest) {
     const jobs = await getJobsByPaletteId(cid, 100);
 
     const completed = jobs.filter((j) => j.status === 'rendered' || j.status === 'published').length;
-    const rendering = jobs.filter((j) => j.status === 'rendering' || j.status === 'queued').length;
-    const draft = jobs.filter((j) => j.status === 'draft' || j.status === 'preview' || j.status === '編集中').length;
-    const failed = jobs.filter((j) => j.status === 'failed').length;
+    const rendering = jobs.filter((j) => (j.status as string) === 'rendering' || (j.status as string) === 'queued' || (j.status as string) === 'レンダリング中').length;
+    const draft = jobs.filter((j) => j.status === 'draft' || j.status === 'preview' || (j.status as string) === '編集中').length;
+    const failed = jobs.filter((j) => (j.status as string) === 'failed' || (j.status as string) === 'エラー').length;
     const youtubePublished = jobs.filter((j) => j.youtubeUrl).length;
 
     const lastJob = jobs.length > 0 ? jobs[0] : null;
