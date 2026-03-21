@@ -1227,15 +1227,31 @@ export default function AdminPage() {
                       {(editingPayload.cuts || []).length > 0 && (
                         <section>
                           <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2.5">プレビュー</p>
-                          <div className="rounded-2xl overflow-hidden p-4 flex justify-center"
-                            style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)' }}>
-                            <CutPreviewCard
-                              cut={(editingPayload.cuts || [])[0]}
-                              cutIndex={0}
-                              payload={editingPayload}
-                              size="lg"
-                            />
-                          </div>
+                          {previewUrl ? (
+                            <div className="rounded-2xl overflow-hidden bg-black flex justify-center">
+                              <video
+                                key={previewUrl}
+                                src={previewUrl}
+                                controls
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="max-h-72 w-auto"
+                                style={{ maxWidth: '100%' }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="rounded-2xl overflow-hidden p-4 flex justify-center"
+                              style={{ background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)' }}>
+                              <CutPreviewCard
+                                cut={(editingPayload.cuts || [])[0]}
+                                cutIndex={0}
+                                payload={editingPayload}
+                                size="lg"
+                              />
+                            </div>
+                          )}
                         </section>
                       )}
 
@@ -1558,10 +1574,25 @@ export default function AdminPage() {
                         )}
                       </div>
 
-                      {/* 配布・公開 */}
+                      {/* 動画プレビュー & 配布・公開 */}
                       {previewUrl && selectedJobId && (
                         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
-                          <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">配布・公開</p>
+                          <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">動画プレビュー</p>
+                          {/* 生成済み動画をインライン表示 */}
+                          <div className="rounded-xl overflow-hidden bg-black flex justify-center">
+                            <video
+                              key={previewUrl}
+                              src={previewUrl}
+                              controls
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                              className="max-h-64 w-auto"
+                              style={{ maxWidth: '100%' }}
+                            />
+                          </div>
+                          <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider pt-1">配布・公開</p>
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => {
